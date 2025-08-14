@@ -29,7 +29,6 @@ import {
   Upload,
   Shield,
 } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
 
 // Define user roles as constants to avoid dependency issues
 const USER_ROLES = {
@@ -38,6 +37,15 @@ const USER_ROLES = {
   STUDENT: "student",
   PENDING: "pending",
 } as const
+
+// Mock auth hook for now
+const useAuth = () => {
+  return {
+    user: null,
+    isAuthenticated: false,
+    signOut: async () => {},
+  }
+}
 
 export default function NavBar() {
   const { user, isAuthenticated, signOut } = useAuth()

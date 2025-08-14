@@ -1,4 +1,3 @@
-// User roles
 export const USER_ROLES = {
   ADMIN: "admin",
   LECTURER: "lecturer",
@@ -6,30 +5,6 @@ export const USER_ROLES = {
   PENDING: "pending",
 } as const
 
-// Navigation configuration
-export const NAVIGATION_CONFIG = {
-  admin: [
-    { href: "/admin", label: "Admin Dashboard", icon: "Shield" },
-    { href: "/profile", label: "Profile", icon: "User" },
-  ],
-  lecturer: [
-    { href: "/lecturer/dashboard", label: "Dashboard", icon: "BarChart3" },
-    { href: "/lecturer/upload", label: "Upload Content", icon: "Upload" },
-    { href: "/lecturer/questions", label: "Answer Questions", icon: "MessageSquareReply" },
-    { href: "/lecturer/students", label: "My Students", icon: "Users" },
-    { href: "/lecturer/analytics", label: "Analytics", icon: "BarChart3" },
-    { href: "/profile", label: "Profile", icon: "User" },
-  ],
-  student: [
-    { href: "/student/dashboard", label: "Dashboard", icon: "BarChart3" },
-    { href: "/student/lecturers", label: "Find Lecturers", icon: "Users" },
-    { href: "/achievements", label: "Achievements", icon: "Trophy" },
-    { href: "/profile", label: "Profile", icon: "User" },
-  ],
-  pending: [{ href: "/profile", label: "Profile", icon: "User" }],
-} as const
-
-// Nigerian Universities
 export const NIGERIAN_UNIVERSITIES = [
   "University of Lagos (UNILAG)",
   "University of Ibadan (UI)",
@@ -45,36 +20,34 @@ export const NIGERIAN_UNIVERSITIES = [
   "Babcock University",
   "Landmark University",
   "Redeemer's University",
+  "Bowen University",
+  "Lead City University",
   "Bells University of Technology",
   "Crawford University",
   "Elizade University",
   "Fountain University",
   "Igbinedion University",
   "Joseph Ayo Babalola University",
-  "Kings University",
-  "Lead City University",
-  "Madonna University",
+  "Kwara State University",
+  "Ladoke Akintola University of Technology",
+  "Mountain Top University",
   "Nile University of Nigeria",
   "Pan-Atlantic University",
-  "Renaissance University",
   "Salem University",
   "Southwestern University",
   "Summit University",
-  "Veritas University",
+  "Tai Solarin University of Education",
   "Wesley University",
   "Adeleke University",
   "Afe Babalola University",
   "Al-Hikmah University",
   "American University of Nigeria",
   "Ajayi Crowther University",
-  "Bowen University",
+  "Baze University",
+  "Bingham University",
   "Caleb University",
-  "Caritas University",
-  "Christopher University",
-  "Crescent University",
-] as const
+]
 
-// Engineering Subjects
 export const ENGINEERING_SUBJECTS = [
   "Civil Engineering",
   "Mechanical Engineering",
@@ -88,47 +61,50 @@ export const ENGINEERING_SUBJECTS = [
   "Industrial Engineering",
   "Materials Engineering",
   "Mining Engineering",
-  "Nuclear Engineering",
-  "Ocean Engineering",
-  "Systems Engineering",
+  "Marine Engineering",
   "Aerospace Engineering",
-  "Automotive Engineering",
+  "Nuclear Engineering",
+  "Systems Engineering",
+  "Food Engineering",
   "Structural Engineering",
   "Geotechnical Engineering",
   "Transportation Engineering",
   "Water Resources Engineering",
   "Power Systems Engineering",
+  "Control Systems Engineering",
   "Electronics Engineering",
   "Telecommunications Engineering",
-  "Control Systems Engineering",
-  "Instrumentation Engineering",
-  "Process Engineering",
-  "Biochemical Engineering",
-  "Food Engineering",
-  "Pharmaceutical Engineering",
+  "Software Engineering",
+  "Network Engineering",
+  "Cybersecurity Engineering",
+  "Robotics Engineering",
+  "Mechatronics Engineering",
   "Engineering Mathematics",
   "Engineering Physics",
+  "Engineering Chemistry",
   "Engineering Drawing",
   "Thermodynamics",
   "Fluid Mechanics",
   "Strength of Materials",
   "Engineering Mechanics",
-  "Engineering Economics",
-  "Project Management",
+  "Circuit Analysis",
+  "Digital Electronics",
+  "Analog Electronics",
+  "Microprocessors",
+  "Embedded Systems",
+  "Signal Processing",
+  "Communication Systems",
+  "Antenna Theory",
+  "Electromagnetic Fields",
+  "Power Electronics",
+  "Machine Design",
+  "Manufacturing Processes",
   "Quality Control",
-  "Safety Engineering",
-  "Engineering Ethics",
-  "Renewable Energy Systems",
-  "Robotics Engineering",
-  "Artificial Intelligence",
-  "Machine Learning",
-  "Data Engineering",
-  "Software Engineering",
-  "Network Engineering",
-  "Cybersecurity Engineering",
-] as const
+  "Project Management",
+  "Engineering Economics",
+  "Professional Ethics",
+]
 
-// Academic Levels (Nigerian System)
 export const ACADEMIC_LEVELS = [
   "100 Level",
   "200 Level",
@@ -138,55 +114,56 @@ export const ACADEMIC_LEVELS = [
   "Postgraduate",
   "Masters",
   "PhD",
-] as const
+]
 
-// Difficulty Levels
-export const DIFFICULTY_LEVELS = ["Beginner", "Intermediate", "Advanced", "Expert"] as const
+export const DIFFICULTY_LEVELS = ["Beginner", "Intermediate", "Advanced", "Expert"]
 
-// Question Status
-export const QUESTION_STATUS = ["open", "answered", "closed"] as const
+export const QUESTION_STATUS = ["Open", "Answered", "Closed", "Under Review"]
 
-// Content Types
-export const CONTENT_TYPES = ["video", "document", "audio", "image", "interactive"] as const
+export const CONTENT_TYPES = [
+  "Video Lesson",
+  "Live Session",
+  "Tutorial",
+  "Workshop",
+  "Seminar",
+  "Lab Session",
+  "Project Review",
+  "Exam Prep",
+]
 
-// Sort Options
 export const SORT_OPTIONS = [
   { value: "newest", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
   { value: "popular", label: "Most Popular" },
   { value: "rating", label: "Highest Rated" },
+  { value: "views", label: "Most Viewed" },
   { value: "alphabetical", label: "A-Z" },
-] as const
+]
 
-// System Settings
-export const SYSTEM_SETTINGS = {
-  MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB
-  ALLOWED_FILE_TYPES: [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "video/mp4",
-    "video/webm",
-    "audio/mp3",
-    "audio/wav",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ],
-  POINTS_SYSTEM: {
-    QUESTION_ASKED: 5,
-    QUESTION_ANSWERED: 10,
-    ANSWER_UPVOTED: 2,
-    LESSON_COMPLETED: 15,
-    PROFILE_COMPLETED: 25,
-  },
-  LEVEL_THRESHOLDS: [0, 100, 250, 500, 1000, 2000, 5000, 10000],
-} as const
+export const VIEW_MODES = [
+  { value: "grid", label: "Grid View" },
+  { value: "list", label: "List View" },
+  { value: "card", label: "Card View" },
+]
 
-// Default Values
-export const DEFAULT_VALUES = {
-  AVATAR_URL: "/placeholder-user.jpg",
-  PLACEHOLDER_IMAGE: "/placeholder.jpg",
-  ITEMS_PER_PAGE: 12,
-  SEARCH_DEBOUNCE: 300,
-} as const
+export const NOTIFICATION_TYPES = [
+  "question_answered",
+  "new_lesson",
+  "assignment_due",
+  "live_session",
+  "achievement_unlocked",
+  "system_update",
+]
+
+export const ACHIEVEMENT_TYPES = [
+  "First Question",
+  "Question Master",
+  "Top Contributor",
+  "Knowledge Seeker",
+  "Video Watcher",
+  "Course Completer",
+  "Perfect Score",
+  "Streak Master",
+  "Community Helper",
+  "Expert Level",
+]

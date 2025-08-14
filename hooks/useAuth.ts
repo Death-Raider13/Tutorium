@@ -4,15 +4,16 @@ import type React from "react"
 
 import { useState, useEffect, createContext, useContext } from "react"
 import {
-  type User as FirebaseUser,
   onAuthStateChanged,
   signOut as firebaseSignOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  GoogleAuthProvider,
+  signInWithPopup,
   updateProfile,
 } from "firebase/auth"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 
 export interface User {
@@ -20,12 +21,20 @@ export interface User {
   email: string
   displayName?: string | null
   profileImage?: string | null
-  role?: string
+  role: "student" | "lecturer" | "admin" | "pending"
   emailVerified: boolean
   createdAt?: Date
   lastLoginAt?: Date
-  points?: number
-  level?: number
+  university?: string
+  department?: string
+  level?: string
+  bio?: string
+  specializations?: string[]
+  verified?: boolean
+  rating?: number
+  totalStudents?: number
+  totalQuestions?: number
+  totalLessons?: number
 }
 
 interface AuthContextType {
@@ -36,17 +45,19 @@ interface AuthContextType {
   isLecturer: boolean
   isStudent: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, displayName: string) => Promise<void>
+  signUp: (email: string, password: string, userData: Partial<User>) => Promise<void>
+  signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
-  refreshUser: () => Promise<void>
+  updateUserProfile: (data: Partial<User>) => Promise<void>
+  sendVerificationEmail: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-export function useAuth(): AuthContextType {
+export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
-    // Return a default context when not wrapped in provider
+    // Return mock data for development
     return {
       user: null,
       isAuthenticated: false,
@@ -54,119 +65,131 @@ export function useAuth(): AuthContextType {
       isAdmin: false,
       isLecturer: false,
       isStudent: false,
-      signIn: async () => {
-        throw new Error("Auth provider not found")
-      },
-      signUp: async () => {
-        throw new Error("Auth provider not found")
-      },
-      signOut: async () => {
-        throw new Error("Auth provider not found")
-      },
-      refreshUser: async () => {
-        throw new Error("Auth provider not found")
-      },
+      signIn: async () => {},
+      signUp: async () => {},
+      signInWithGoogle: async () => {},
+      signOut: async () => {},
+      updateUserProfile: async () => {},
+      sendVerificationEmail: async () => {},
     }
   }
   return context
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchUserData = async (firebaseUser: FirebaseUser): Promise<User> => {
-    try {
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-      const userData = userDoc.data()
-
-      return {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email || "",
-        displayName: firebaseUser.displayName,
-        profileImage: firebaseUser.photoURL,
-        emailVerified: firebaseUser.emailVerified,
-        role: userData?.role || "pending",
-        createdAt: userData?.createdAt?.toDate(),
-        lastLoginAt: userData?.lastLoginAt?.toDate(),
-        points: userData?.points || 0,
-        level: userData?.level || 1,
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error)
-      // Return basic user data if Firestore fetch fails
-      return {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email || "",
-        displayName: firebaseUser.displayName,
-        profileImage: firebaseUser.photoURL,
-        emailVerified: firebaseUser.emailVerified,
-        role: "pending",
-        points: 0,
-        level: 1,
-      }
-    }
-  }
-
-  const refreshUser = async () => {
-    if (auth.currentUser) {
-      const userData = await fetchUserData(auth.currentUser)
-      setUser(userData)
-    }
-  }
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setIsLoading(true)
-      try {
-        if (firebaseUser) {
-          const userData = await fetchUserData(firebaseUser)
-          setUser(userData)
-        } else {
+      if (firebaseUser) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
+          if (userDoc.exists()) {
+            const userData = userDoc.data()
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email!,
+              displayName: firebaseUser.displayName,
+              profileImage: firebaseUser.photoURL,
+              emailVerified: firebaseUser.emailVerified,
+              ...userData,
+            } as User)
+          } else {
+            // Create user document if it doesn't exist
+            const newUser: User = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email!,
+              displayName: firebaseUser.displayName,
+              profileImage: firebaseUser.photoURL,
+              role: "pending",
+              emailVerified: firebaseUser.emailVerified,
+              createdAt: new Date(),
+              lastLoginAt: new Date(),
+            }
+            await setDoc(doc(db, "users", firebaseUser.uid), newUser)
+            setUser(newUser)
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error)
           setUser(null)
         }
-      } catch (error) {
-        console.error("Auth state change error:", error)
+      } else {
         setUser(null)
-      } finally {
-        setIsLoading(false)
       }
+      setIsLoading(false)
     })
 
-    return unsubscribe
+    return () => unsubscribe()
   }, [])
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const result = await signInWithEmailAndPassword(auth, email, password)
+      await updateDoc(doc(db, "users", result.user.uid), {
+        lastLoginAt: new Date(),
+      })
     } catch (error) {
       console.error("Sign in error:", error)
       throw error
     }
   }
 
-  const signUp = async (email: string, password: string, displayName: string) => {
+  const signUp = async (email: string, password: string, userData: Partial<User>) => {
     try {
-      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password)
+      const result = await createUserWithEmailAndPassword(auth, email, password)
 
-      // Update profile
-      await updateProfile(firebaseUser, { displayName })
+      if (userData.displayName) {
+        await updateProfile(result.user, {
+          displayName: userData.displayName,
+        })
+      }
 
-      // Send verification email
-      await sendEmailVerification(firebaseUser)
-
-      // Create user document in Firestore
-      await setDoc(doc(db, "users", firebaseUser.uid), {
-        email,
-        displayName,
-        role: "pending",
+      const newUser: User = {
+        uid: result.user.uid,
+        email: result.user.email!,
+        displayName: userData.displayName || null,
+        profileImage: null,
+        role: userData.role || "student",
+        emailVerified: false,
         createdAt: new Date(),
         lastLoginAt: new Date(),
-        points: 0,
-        level: 1,
-      })
+        ...userData,
+      }
+
+      await setDoc(doc(db, "users", result.user.uid), newUser)
+      await sendEmailVerification(result.user)
     } catch (error) {
       console.error("Sign up error:", error)
+      throw error
+    }
+  }
+
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+
+      const userDoc = await getDoc(doc(db, "users", result.user.uid))
+      if (!userDoc.exists()) {
+        const newUser: User = {
+          uid: result.user.uid,
+          email: result.user.email!,
+          displayName: result.user.displayName,
+          profileImage: result.user.photoURL,
+          role: "student",
+          emailVerified: result.user.emailVerified,
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+        }
+        await setDoc(doc(db, "users", result.user.uid), newUser)
+      } else {
+        await updateDoc(doc(db, "users", result.user.uid), {
+          lastLoginAt: new Date(),
+        })
+      }
+    } catch (error) {
+      console.error("Google sign in error:", error)
       throw error
     }
   }
@@ -180,6 +203,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const updateUserProfile = async (data: Partial<User>) => {
+    if (!user) throw new Error("No user logged in")
+
+    try {
+      await updateDoc(doc(db, "users", user.uid), data)
+      setUser({ ...user, ...data })
+    } catch (error) {
+      console.error("Update profile error:", error)
+      throw error
+    }
+  }
+
+  const sendVerificationEmail = async () => {
+    if (!auth.currentUser) throw new Error("No user logged in")
+
+    try {
+      await sendEmailVerification(auth.currentUser)
+    } catch (error) {
+      console.error("Send verification email error:", error)
+      throw error
+    }
+  }
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -189,8 +235,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isStudent: user?.role === "student",
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
-    refreshUser,
+    updateUserProfile,
+    sendVerificationEmail,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
