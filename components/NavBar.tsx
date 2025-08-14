@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { Menu, Bell, Search, Settings, LogOut, User } from "lucide-react"
+import { Menu, Bell, Search, Settings, LogOut, User, GraduationCap } from "lucide-react"
 
 // Mock auth hook for development
 const useAuth = () => {
@@ -37,7 +37,7 @@ export default function NavBar() {
     { name: "Home", href: "/" },
     { name: "Lessons", href: "/lessons" },
     { name: "Questions", href: "/questions" },
-    { name: "Study Groups", href: "/study-groups" },
+    { name: "Ask Question", href: "/ask" },
   ]
 
   const handleSignOut = async () => {
@@ -75,7 +75,7 @@ export default function NavBar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">T</span>
+                <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900">Tutorium</span>
             </Link>

@@ -4,474 +4,371 @@ import { useState, useEffect } from "react"
 import {
   collection,
   query,
-  where,
   onSnapshot,
-  addDoc,
-  deleteDoc,
+  orderBy,
+  where,
   doc,
-  serverTimestamp,
-  limit,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  addDoc,
   getDocs,
+  deleteDoc,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/useAuth"
 import AuthGuard from "@/components/AuthGuard"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import {
-  GraduationCap,
   Search,
   Star,
-  BookOpen,
   Users,
+  BookOpen,
   MessageSquare,
-  Bell,
-  BellOff,
-  Filter,
   MapPin,
-  Award,
+  GraduationCap,
   Clock,
-  TrendingUp,
-  AlertCircle,
-  Loader2,
+  Filter,
+  SortAsc,
+  UserPlus,
+  UserMinus,
+  Verified,
+  Circle,
 } from "lucide-react"
-import { SUBJECTS as ENGINEERING_DEPARTMENTS, NIGERIAN_UNIVERSITIES } from "@/lib/constants"
 import { toast } from "@/hooks/use-toast"
+import { NIGERIAN_UNIVERSITIES, ENGINEERING_DEPARTMENTS } from "@/lib/constants"
 
 interface Lecturer {
-  id: string
+  uid: string
   displayName: string
   email: string
-  profileImage?: string
   bio?: string
   university?: string
   department?: string
-  specializations: string[]
-  experience?: string
-  education?: string
-  researchInterests?: string
-  rating: number
-  totalLessons: number
-  totalStudents: number
-  questionsAnswered: number
-  joinedAt: Date
-  lastActive: Date
-  isVerified: boolean
-  staffId?: string
+  specializations?: string[]
+  rating?: number
+  totalStudents?: number
+  totalLessons?: number
+  totalQuestions?: number
+  isVerified?: boolean
   isOnline?: boolean
-  role: string
+  lastSeen?: Date
+  profileImage?: string
+  yearsOfExperience?: number
+  subscribers?: string[]
+  createdAt?: Date
 }
 
 interface Subscription {
-  id: string
-  studentId: string
   lecturerId: string
-  lecturerEmail: string
-  createdAt: Date
-  notificationsEnabled: boolean
+  studentId: string
+  subscribedAt: Date
 }
 
 export default function FindLecturersPage() {
   const { user } = useAuth()
   const [lecturers, setLecturers] = useState<Lecturer[]>([])
-  const [filteredLecturers, setFilteredLecturers] = useState<Lecturer[]>([])
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+  const [subscriptions, setSubscriptions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedDepartment, setSelectedDepartment] = useState("all")
-  const [selectedUniversity, setSelectedUniversity] = useState("all")
-  const [sortBy, setSortBy] = useState("rating")
-  const [subscribing, setSubscribing] = useState<string | null>(null)
-
-  const formatDistanceToNow = (date: Date) => {
-    const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-
-    if (diffInMinutes < 1) return "just now"
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-    return `${Math.floor(diffInMinutes / 1440)}d ago`
-  }
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all")
+  const [selectedUniversity, setSelectedUniversity] = useState<string>("all")
+  const [sortBy, setSortBy] = useState<string>("rating")
+  const [subscribingTo, setSubscribingTo] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
 
-    console.log("Starting to fetch lecturers...")
-    setError(null)
+    // Fetch lecturers with real-time updates
+    const lecturersQuery = query(collection(db, "users"), where("role", "==", "lecturer"), orderBy("createdAt", "desc"))
 
-    // Fetch all lecturers with real-time updates - removed orderBy to avoid index requirement
-    const lecturersQuery = query(collection(db, "users"), where("role", "==", "lecturer"), limit(50))
+    const unsubscribeLecturers = onSnapshot(lecturersQuery, (snapshot) => {
+      const lecturersData = snapshot.docs.map((doc) => ({
+        uid: doc.id,
+        ...doc.data(),
+        lastSeen: doc.data().lastSeen?.toDate(),
+        createdAt: doc.data().createdAt?.toDate(),
+      })) as Lecturer[]
 
-    const unsubscribeLecturers = onSnapshot(
-      lecturersQuery,
-      async (snapshot) => {
-        console.log("Lecturers snapshot received:", snapshot.size, "documents")
+      setLecturers(lecturersData)
+      setLoading(false)
+    })
 
-        try {
-          const lecturersData = await Promise.all(
-            snapshot.docs.map(async (docSnapshot) => {
-              const data = docSnapshot.data()
-              console.log("Processing lecturer:", data.email)
+    // Fetch user's subscriptions with real-time updates
+    const subscriptionsQuery = query(collection(db, "subscriptions"), where("studentId", "==", user.uid))
 
-              // Generate mock stats for demonstration
-              const mockStats = {
-                totalLessons: Math.floor(Math.random() * 20) + 1,
-                questionsAnswered: Math.floor(Math.random() * 50) + 1,
-                totalStudents: Math.floor(Math.random() * 100) + 1,
-                rating: 3.5 + Math.random() * 1.5, // Rating between 3.5-5.0
-                isVerified: Math.random() > 0.3, // 70% verified
-                isOnline: Math.random() > 0.5, // 50% online
-              }
-
-              return {
-                id: docSnapshot.id,
-                displayName:
-                  data.displayName || data.firstName + " " + data.lastName || data.email?.split("@")[0] || "Unknown",
-                email: data.email,
-                profileImage: data.profileImage,
-                bio:
-                  data.bio ||
-                  `Experienced ${data.department || "Engineering"} lecturer passionate about teaching and research.`,
-                university:
-                  data.university || NIGERIAN_UNIVERSITIES[Math.floor(Math.random() * NIGERIAN_UNIVERSITIES.length)],
-                department:
-                  data.department ||
-                  ENGINEERING_DEPARTMENTS[Math.floor(Math.random() * ENGINEERING_DEPARTMENTS.length)],
-                specializations: data.specializations || [
-                  ENGINEERING_DEPARTMENTS[Math.floor(Math.random() * ENGINEERING_DEPARTMENTS.length)],
-                  ENGINEERING_DEPARTMENTS[Math.floor(Math.random() * ENGINEERING_DEPARTMENTS.length)],
-                ],
-                experience: data.experience,
-                education: data.education,
-                researchInterests: data.researchInterests,
-                joinedAt: data.createdAt?.toDate() || new Date(),
-                lastActive: data.lastActive?.toDate() || new Date(),
-                staffId: data.staffId,
-                role: data.role,
-                ...mockStats,
-              } as Lecturer
-            }),
-          )
-
-          console.log("Processed lecturers:", lecturersData.length)
-
-          // Sort lecturers by creation date (newest first) on client side
-          lecturersData.sort((a, b) => b.joinedAt.getTime() - a.joinedAt.getTime())
-
-          setLecturers(lecturersData)
-          setLoading(false)
-        } catch (err) {
-          console.error("Error processing lecturers:", err)
-          setError("Failed to load lecturer data")
-          setLoading(false)
-        }
-      },
-      (err) => {
-        console.error("Error fetching lecturers:", err)
-        setError("Failed to connect to database. Please check your connection.")
-        setLoading(false)
-      },
-    )
+    const unsubscribeSubscriptions = onSnapshot(subscriptionsQuery, (snapshot) => {
+      const subscriptionIds = snapshot.docs.map((doc) => doc.data().lecturerId)
+      setSubscriptions(subscriptionIds)
+    })
 
     return () => {
-      console.log("Cleaning up lecturers listener")
       unsubscribeLecturers()
+      unsubscribeSubscriptions()
     }
   }, [user])
-
-  useEffect(() => {
-    if (!user) return
-
-    console.log("Starting to fetch subscriptions...")
-
-    // Try to fetch user's subscriptions with better error handling
-    const fetchSubscriptions = async () => {
-      try {
-        // First, try to check if the subscriptions collection exists and we have access
-        const subscriptionsRef = collection(db, "subscriptions")
-        const subscriptionsQuery = query(subscriptionsRef, where("studentId", "==", user.uid), limit(1))
-
-        // Test access with a simple query first
-        const testSnapshot = await getDocs(subscriptionsQuery)
-        console.log("Subscriptions access test successful")
-
-        // If test succeeds, fetch all subscriptions
-        const fullQuery = query(subscriptionsRef, where("studentId", "==", user.uid))
-        const snapshot = await getDocs(fullQuery)
-        console.log("Subscriptions snapshot received:", snapshot.size, "documents")
-
-        const subscriptionsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-        })) as Subscription[]
-
-        setSubscriptions(subscriptionsData)
-
-        // Set up real-time listener only if initial fetch succeeds
-        const unsubscribeSubscriptions = onSnapshot(
-          fullQuery,
-          (snapshot) => {
-            const subscriptionsData = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-              createdAt: doc.data().createdAt?.toDate() || new Date(),
-            })) as Subscription[]
-            setSubscriptions(subscriptionsData)
-          },
-          (err) => {
-            console.error("Error in subscriptions listener:", err)
-            // Silently handle listener errors, keep existing data
-          },
-        )
-
-        return unsubscribeSubscriptions
-      } catch (err) {
-        console.error("Error fetching subscriptions:", err)
-
-        // Check if it's a permissions error
-        if (err instanceof Error && err.message.includes("permissions")) {
-          console.log("Permissions error detected, initializing empty subscriptions")
-          // Initialize subscriptions collection for this user if it doesn't exist
-          try {
-            // Create a dummy subscription document to initialize the collection
-            // This will be immediately deleted but ensures the collection exists
-            const dummyDoc = await addDoc(collection(db, "subscriptions"), {
-              studentId: user.uid,
-              lecturerId: "dummy",
-              createdAt: serverTimestamp(),
-              _temp: true,
-            })
-
-            // Delete the dummy document
-            await deleteDoc(doc(db, "subscriptions", dummyDoc.id))
-            console.log("Subscriptions collection initialized")
-
-            // Retry fetching after initialization
-            setTimeout(() => {
-              fetchSubscriptions()
-            }, 1000)
-          } catch (initError) {
-            console.error("Error initializing subscriptions collection:", initError)
-            // If we can't initialize, just use empty subscriptions
-            setSubscriptions([])
-          }
-        } else {
-          // For other errors, just use empty subscriptions
-          setSubscriptions([])
-        }
-
-        return null
-      }
-    }
-
-    let unsubscribeSubscriptions: (() => void) | null = null
-
-    fetchSubscriptions().then((unsub) => {
-      unsubscribeSubscriptions = unsub
-    })
-
-    return () => {
-      if (unsubscribeSubscriptions) {
-        console.log("Cleaning up subscriptions listener")
-        unsubscribeSubscriptions()
-      }
-    }
-  }, [user])
-
-  useEffect(() => {
-    let filtered = lecturers
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (lecturer) =>
-          lecturer.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lecturer.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lecturer.university?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lecturer.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lecturer.specializations.some((spec) => spec.toLowerCase().includes(searchTerm.toLowerCase())),
-      )
-    }
-
-    // Filter by department
-    if (selectedDepartment !== "all") {
-      filtered = filtered.filter(
-        (lecturer) =>
-          lecturer.department === selectedDepartment || lecturer.specializations.includes(selectedDepartment),
-      )
-    }
-
-    // Filter by university
-    if (selectedUniversity !== "all") {
-      filtered = filtered.filter((lecturer) => lecturer.university === selectedUniversity)
-    }
-
-    // Sort lecturers
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "rating":
-          return b.rating - a.rating
-        case "students":
-          return b.totalStudents - a.totalStudents
-        case "lessons":
-          return b.totalLessons - a.totalLessons
-        case "recent":
-          return b.lastActive.getTime() - a.lastActive.getTime()
-        case "name":
-          return a.displayName.localeCompare(b.displayName)
-        default:
-          return 0
-      }
-    })
-
-    setFilteredLecturers(filtered)
-  }, [lecturers, searchTerm, selectedDepartment, selectedUniversity, sortBy])
 
   const handleSubscribe = async (lecturerId: string) => {
-    if (!user) return
+    if (!user || subscribingTo) return
 
-    setSubscribing(lecturerId)
+    setSubscribingTo(lecturerId)
 
     try {
-      // Check if already subscribed
-      const existingSubscription = subscriptions.find((sub) => sub.lecturerId === lecturerId)
+      const isSubscribed = subscriptions.includes(lecturerId)
 
-      if (existingSubscription) {
+      if (isSubscribed) {
         // Unsubscribe
-        await deleteDoc(doc(db, "subscriptions", existingSubscription.id))
+        const subscriptionQuery = query(
+          collection(db, "subscriptions"),
+          where("studentId", "==", user.uid),
+          where("lecturerId", "==", lecturerId),
+        )
+
+        const subscriptionSnapshot = await getDocs(subscriptionQuery)
+        if (!subscriptionSnapshot.empty) {
+          await deleteDoc(subscriptionSnapshot.docs[0].ref)
+        }
+
+        // Update lecturer's subscriber count
+        const lecturerRef = doc(db, "users", lecturerId)
+        await updateDoc(lecturerRef, {
+          subscribers: arrayRemove(user.uid),
+          totalStudents: Math.max(0, (lecturers.find((l) => l.uid === lecturerId)?.totalStudents || 1) - 1),
+        })
+
         toast({
           title: "Unsubscribed",
           description: "You have unsubscribed from this lecturer",
         })
       } else {
         // Subscribe
-        const lecturer = lecturers.find((l) => l.id === lecturerId)
-        if (!lecturer) return
+        await addDoc(collection(db, "subscriptions"), {
+          studentId: user.uid,
+          lecturerId: lecturerId,
+          subscribedAt: new Date(),
+        })
 
-        try {
-          await addDoc(collection(db, "subscriptions"), {
+        // Update lecturer's subscriber count
+        const lecturerRef = doc(db, "users", lecturerId)
+        await updateDoc(lecturerRef, {
+          subscribers: arrayUnion(user.uid),
+          totalStudents: (lecturers.find((l) => l.uid === lecturerId)?.totalStudents || 0) + 1,
+        })
+
+        // Send notification to lecturer
+        await addDoc(collection(db, "notifications"), {
+          userId: lecturerId,
+          type: "new_subscriber",
+          title: "New Subscriber",
+          message: `${user.displayName || user.email} has subscribed to your content`,
+          isRead: false,
+          createdAt: new Date(),
+          data: {
             studentId: user.uid,
-            studentEmail: user.email,
             studentName: user.displayName || user.email,
-            lecturerId: lecturerId,
-            lecturerEmail: lecturer.email,
-            lecturerName: lecturer.displayName,
-            createdAt: serverTimestamp(),
-            notificationsEnabled: true,
-          })
+          },
+        })
 
-          // Create notification for lecturer (optional, don't fail if this fails)
-          try {
-            await addDoc(collection(db, "notifications"), {
-              userId: lecturerId,
-              type: "subscription",
-              title: "New student subscription",
-              message: `${user.displayName || user.email} subscribed to your content`,
-              data: {
-                studentId: user.uid,
-                studentName: user.displayName || user.email,
-              },
-              priority: "medium",
-              isRead: false,
-              createdAt: serverTimestamp(),
-            })
-          } catch (notificationError) {
-            console.error("Error creating notification:", notificationError)
-            // Don't fail the subscription if notification fails
-          }
-
-          toast({
-            title: "Subscribed!",
-            description: `You are now subscribed to ${lecturer.displayName}`,
-          })
-        } catch (subscribeError) {
-          console.error("Error creating subscription:", subscribeError)
-
-          if (subscribeError instanceof Error && subscribeError.message.includes("permissions")) {
-            toast({
-              title: "Permission Error",
-              description: "Unable to create subscription. Please try refreshing the page.",
-              variant: "destructive",
-            })
-          } else {
-            throw subscribeError // Re-throw other errors
-          }
-        }
+        toast({
+          title: "Subscribed",
+          description: "You have successfully subscribed to this lecturer",
+        })
       }
     } catch (error) {
-      console.error("Error managing subscription:", error)
+      console.error("Error updating subscription:", error)
       toast({
         title: "Error",
         description: "Failed to update subscription. Please try again.",
         variant: "destructive",
       })
     } finally {
-      setSubscribing(null)
+      setSubscribingTo(null)
     }
   }
 
-  const isSubscribed = (lecturerId: string) => {
-    return subscriptions.some((sub) => sub.lecturerId === lecturerId)
+  const filteredAndSortedLecturers = lecturers
+    .filter((lecturer) => {
+      const matchesSearch =
+        lecturer.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lecturer.bio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lecturer.university?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lecturer.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lecturer.specializations?.some((spec) => spec.toLowerCase().includes(searchTerm.toLowerCase()))
+
+      const matchesDepartment = selectedDepartment === "all" || lecturer.department === selectedDepartment
+      const matchesUniversity = selectedUniversity === "all" || lecturer.university === selectedUniversity
+
+      return matchesSearch && matchesDepartment && matchesUniversity
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return (b.rating || 0) - (a.rating || 0)
+        case "students":
+          return (b.totalStudents || 0) - (a.totalStudents || 0)
+        case "lessons":
+          return (b.totalLessons || 0) - (a.totalLessons || 0)
+        case "activity":
+          return new Date(b.lastSeen || 0).getTime() - new Date(a.lastSeen || 0).getTime()
+        case "name":
+          return (a.displayName || "").localeCompare(b.displayName || "")
+        default:
+          return 0
+      }
+    })
+
+  const subscribedLecturers = filteredAndSortedLecturers.filter((lecturer) => subscriptions.includes(lecturer.uid))
+
+  const topRatedLecturers = [...filteredAndSortedLecturers]
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    .slice(0, 10)
+
+  const newLecturers = [...filteredAndSortedLecturers]
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 10)
+
+  const formatLastSeen = (lastSeen: Date | undefined) => {
+    if (!lastSeen) return "Never"
+
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - lastSeen.getTime()) / (1000 * 60))
+
+    if (diffInMinutes < 5) return "Online"
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
   }
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((word) => word.charAt(0))
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
-  }
+  const LecturerCard = ({ lecturer }: { lecturer: Lecturer }) => {
+    const isSubscribed = subscriptions.includes(lecturer.uid)
+    const isLoading = subscribingTo === lecturer.uid
 
-  const getSubscribedLecturers = () => {
-    const subscribedIds = subscriptions.map((sub) => sub.lecturerId)
-    return lecturers.filter((lecturer) => subscribedIds.includes(lecturer.id))
-  }
-
-  const getTopLecturers = () => {
-    return [...lecturers].sort((a, b) => b.rating - a.rating).slice(0, 10)
-  }
-
-  const getRecentlyJoined = () => {
-    return [...lecturers].sort((a, b) => b.joinedAt.getTime() - a.joinedAt.getTime()).slice(0, 10)
+    return (
+      <Card className="hover:shadow-lg transition-shadow duration-200">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={lecturer.profileImage || "/placeholder.svg"} alt={lecturer.displayName} />
+                  <AvatarFallback>
+                    {lecturer.displayName
+                      ?.split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase() || "L"}
+                  </AvatarFallback>
+                </Avatar>
+                {lecturer.isOnline && (
+                  <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white rounded-full" />
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-lg">{lecturer.displayName}</h3>
+                  {lecturer.isVerified && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Verified className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span>{lecturer.rating?.toFixed(1) || "0.0"}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    <span>{lecturer.totalStudents || 0} students</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <BookOpen className="h-4 w-4" />
+                    <span>{lecturer.totalLessons || 0} lessons</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
+                <Circle
+                  className={`h-2 w-2 ${lecturer.isOnline ? "fill-green-500 text-green-500" : "fill-gray-400 text-gray-400"}`}
+                />
+                <span>{formatLastSeen(lecturer.lastSeen)}</span>
+              </div>
+              <Button
+                size="sm"
+                variant={isSubscribed ? "outline" : "default"}
+                onClick={() => handleSubscribe(lecturer.uid)}
+                disabled={isLoading}
+                className="min-w-[100px]"
+              >
+                {isLoading ? (
+                  <LoadingSpinner size="sm" />
+                ) : isSubscribed ? (
+                  <>
+                    <UserMinus className="h-4 w-4 mr-1" />
+                    Unsubscribe
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Subscribe
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <span>{lecturer.university || "University not specified"}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <GraduationCap className="h-4 w-4 text-gray-500" />
+              <span>{lecturer.department || "Department not specified"}</span>
+            </div>
+            {lecturer.bio && <p className="text-sm text-gray-600 line-clamp-2">{lecturer.bio}</p>}
+            {lecturer.specializations && lecturer.specializations.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {lecturer.specializations.slice(0, 3).map((spec, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {spec}
+                  </Badge>
+                ))}
+                {lecturer.specializations.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{lecturer.specializations.length - 3} more
+                  </Badge>
+                )}
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm text-gray-500 pt-2 border-t">
+              <div className="flex items-center gap-1">
+                <MessageSquare className="h-4 w-4" />
+                <span>{lecturer.totalQuestions || 0} answered</span>
+              </div>
+              {lecturer.yearsOfExperience && <span>{lecturer.yearsOfExperience} years exp.</span>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading engineering lecturers...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full bg-transparent"
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </Button>
-          </AlertDescription>
-        </Alert>
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" text="Loading lecturers..." />
       </div>
     )
   }
@@ -479,448 +376,184 @@ export default function FindLecturersPage() {
   return (
     <AuthGuard requireAuth={true} allowedRoles={["student"]}>
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-blue-600" />
-              Find Engineering Lecturers
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Discover and subscribe to expert engineering lecturers from Nigerian universities
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Engineering Lecturers</h1>
+            <p className="text-gray-600">Discover and connect with engineering lecturers from Nigerian universities</p>
           </div>
 
+          {/* Search and Filters */}
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search lecturers, universities, specializations..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="All Departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {ENGINEERING_DEPARTMENTS.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
+                  <SelectTrigger>
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="All Universities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Universities</SelectItem>
+                    {NIGERIAN_UNIVERSITIES.map((uni) => (
+                      <SelectItem key={uni} value={uni}>
+                        {uni}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SortAsc className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rating">Highest Rated</SelectItem>
+                    <SelectItem value="students">Most Students</SelectItem>
+                    <SelectItem value="lessons">Most Lessons</SelectItem>
+                    <SelectItem value="activity">Most Active</SelectItem>
+                    <SelectItem value="name">Name (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tabs */}
           <Tabs defaultValue="discover" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="discover">Discover ({filteredLecturers.length})</TabsTrigger>
-              <TabsTrigger value="subscribed">Subscribed ({getSubscribedLecturers().length})</TabsTrigger>
-              <TabsTrigger value="top-rated">Top Rated ({getTopLecturers().length})</TabsTrigger>
-              <TabsTrigger value="new">New Lecturers ({getRecentlyJoined().length})</TabsTrigger>
+              <TabsTrigger value="discover">Discover ({filteredAndSortedLecturers.length})</TabsTrigger>
+              <TabsTrigger value="subscribed">Subscribed ({subscribedLecturers.length})</TabsTrigger>
+              <TabsTrigger value="top-rated">Top Rated ({topRatedLecturers.length})</TabsTrigger>
+              <TabsTrigger value="new">New Lecturers ({newLecturers.length})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="discover" className="space-y-6">
-              {/* Filters */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        placeholder="Search lecturers..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Departments" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Departments</SelectItem>
-                        {ENGINEERING_DEPARTMENTS.map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Universities" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Universities</SelectItem>
-                        {NIGERIAN_UNIVERSITIES.map((university) => (
-                          <SelectItem key={university} value={university}>
-                            {university}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sort by" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rating">Highest Rated</SelectItem>
-                        <SelectItem value="students">Most Students</SelectItem>
-                        <SelectItem value="lessons">Most Lessons</SelectItem>
-                        <SelectItem value="recent">Recently Active</SelectItem>
-                        <SelectItem value="name">Name A-Z</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Filter className="h-4 w-4 mr-1" />
-                      {filteredLecturers.length} found
-                    </div>
+            <TabsContent value="discover">
+              <div className="space-y-6">
+                {filteredAndSortedLecturers.length === 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center py-8">
+                        <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No lecturers found</h3>
+                        <p className="text-gray-600">
+                          Try adjusting your search criteria or filters to find more lecturers.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredAndSortedLecturers.map((lecturer) => (
+                      <LecturerCard key={lecturer.uid} lecturer={lecturer} />
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
+            </TabsContent>
 
-              {/* Lecturers Grid */}
-              {filteredLecturers.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-12">
-                      <GraduationCap className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No lecturers found</h3>
-                      <p className="text-gray-600">
-                        {lecturers.length === 0
-                          ? "No lecturers have joined the platform yet. Check back later!"
-                          : "Try adjusting your search filters to find more lecturers."}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredLecturers.map((lecturer) => (
-                    <Card key={lecturer.id} className="hover:shadow-lg transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-center space-x-4">
-                          <div className="relative">
-                            <Avatar className="h-16 w-16">
-                              <AvatarImage
-                                src={lecturer.profileImage || "/placeholder.svg"}
-                                alt={lecturer.displayName}
-                              />
-                              <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">
-                                {getInitials(lecturer.displayName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            {lecturer.isOnline && (
-                              <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white rounded-full"></div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <CardTitle className="text-lg truncate">{lecturer.displayName}</CardTitle>
-                              {lecturer.isVerified && (
-                                <Badge className="bg-blue-100 text-blue-800">
-                                  <Award className="h-3 w-3 mr-1" />
-                                  Verified
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 mb-2">
-                              <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                              <span className="text-sm font-medium">{lecturer.rating.toFixed(1)}</span>
-                              <span className="text-sm text-gray-500">({lecturer.totalStudents} students)</span>
-                            </div>
-                            {lecturer.university && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <MapPin className="h-3 w-3" />
-                                <span className="truncate">{lecturer.university}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                              <Clock className="h-3 w-3" />
-                              <span className={lecturer.isOnline ? "text-green-600" : "text-gray-500"}>
-                                {lecturer.isOnline
-                                  ? "Online now"
-                                  : `Last seen ${formatDistanceToNow(lecturer.lastActive)}`}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {lecturer.department && (
-                            <Badge variant="outline" className="text-xs">
-                              {lecturer.department}
-                            </Badge>
-                          )}
+            <TabsContent value="subscribed">
+              <div className="space-y-6">
+                {subscribedLecturers.length === 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center py-8">
+                        <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No subscriptions yet</h3>
+                        <p className="text-gray-600">Subscribe to lecturers to see their content and get updates.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {subscribedLecturers.map((lecturer) => (
+                      <LecturerCard key={lecturer.uid} lecturer={lecturer} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
 
-                          {lecturer.bio && <p className="text-sm text-gray-600 line-clamp-3">{lecturer.bio}</p>}
-
-                          {lecturer.specializations.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-700 mb-2">Specializations:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {lecturer.specializations.slice(0, 3).map((spec, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs">
-                                    {spec}
-                                  </Badge>
-                                ))}
-                                {lecturer.specializations.length > 3 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    +{lecturer.specializations.length - 3} more
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="grid grid-cols-3 gap-2 text-sm">
-                            <div className="flex items-center gap-1">
-                              <BookOpen className="h-4 w-4 text-green-500" />
-                              <span>{lecturer.totalLessons}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MessageSquare className="h-4 w-4 text-blue-500" />
-                              <span>{lecturer.questionsAnswered}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-purple-500" />
-                              <span>{lecturer.totalStudents}</span>
-                            </div>
-                          </div>
-
-                          <Button
-                            onClick={() => handleSubscribe(lecturer.id)}
-                            disabled={subscribing === lecturer.id}
-                            className={`w-full ${
-                              isSubscribed(lecturer.id)
-                                ? "bg-red-600 hover:bg-red-700"
-                                : "bg-blue-600 hover:bg-blue-700"
+            <TabsContent value="top-rated">
+              <div className="space-y-6">
+                {topRatedLecturers.length === 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center py-8">
+                        <Star className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No rated lecturers yet</h3>
+                        <p className="text-gray-600">
+                          Lecturers will appear here once they receive ratings from students.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {topRatedLecturers.map((lecturer, index) => (
+                      <div key={lecturer.uid} className="relative">
+                        {index < 3 && (
+                          <Badge
+                            className={`absolute -top-2 -right-2 z-10 ${
+                              index === 0 ? "bg-yellow-500" : index === 1 ? "bg-gray-400" : "bg-amber-600"
                             }`}
                           >
-                            {subscribing === lecturer.id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                {isSubscribed(lecturer.id) ? "Unsubscribing..." : "Subscribing..."}
-                              </>
-                            ) : (
-                              <>
-                                {isSubscribed(lecturer.id) ? (
-                                  <>
-                                    <BellOff className="h-4 w-4 mr-2" />
-                                    Unsubscribe
-                                  </>
-                                ) : (
-                                  <>
-                                    <Bell className="h-4 w-4 mr-2" />
-                                    Subscribe
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="subscribed" className="space-y-6">
-              {getSubscribedLecturers().length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-12">
-                      <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No subscriptions yet</h3>
-                      <p className="text-gray-600 mb-6">
-                        Subscribe to engineering lecturers to get notified about their new content and live streams
-                      </p>
-                      <Button
-                        onClick={() => {
-                          const discoverTab = document.querySelector('[value="discover"]') as HTMLElement
-                          discoverTab?.click()
-                        }}
-                      >
-                        Discover Lecturers
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {getSubscribedLecturers().map((lecturer) => {
-                    const subscription = subscriptions.find((sub) => sub.lecturerId === lecturer.id)
-                    return (
-                      <Card key={lecturer.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div className="relative">
-                                <Avatar className="h-12 w-12">
-                                  <AvatarImage
-                                    src={lecturer.profileImage || "/placeholder.svg"}
-                                    alt={lecturer.displayName}
-                                  />
-                                  <AvatarFallback className="bg-blue-100 text-blue-600">
-                                    {getInitials(lecturer.displayName)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                {lecturer.isOnline && (
-                                  <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
-                                )}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-medium">{lecturer.displayName}</h3>
-                                  {lecturer.isVerified && (
-                                    <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                      <Award className="h-3 w-3 mr-1" />
-                                      Verified
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-600">{lecturer.department}</p>
-                                <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                                  <span className="flex items-center gap-1">
-                                    <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                                    {lecturer.rating.toFixed(1)}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <BookOpen className="h-3 w-3" />
-                                    {lecturer.totalLessons} lessons
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    {lecturer.university}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Subscribed {formatDistanceToNow(subscription?.createdAt || new Date())}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-green-100 text-green-800">
-                                <Bell className="h-3 w-3 mr-1" />
-                                Subscribed
-                              </Badge>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSubscribe(lecturer.id)}
-                                disabled={subscribing === lecturer.id}
-                              >
-                                {subscribing === lecturer.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  "Unsubscribe"
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="top-rated" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-yellow-500" />
-                    Top Rated Engineering Lecturers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {getTopLecturers().map((lecturer, index) => (
-                      <div key={lecturer.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center justify-center w-8 h-8 bg-yellow-100 text-yellow-800 rounded-full font-bold">
                             #{index + 1}
-                          </div>
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={lecturer.profileImage || "/placeholder.svg"} alt={lecturer.displayName} />
-                            <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {getInitials(lecturer.displayName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">{lecturer.displayName}</h3>
-                              {lecturer.isVerified && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                  <Award className="h-3 w-3 mr-1" />
-                                  Verified
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600">{lecturer.department}</p>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                              <span className="text-sm font-medium">{lecturer.rating.toFixed(1)}</span>
-                              <span className="text-sm text-gray-500">({lecturer.totalStudents} students)</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => handleSubscribe(lecturer.id)}
-                          disabled={subscribing === lecturer.id}
-                          variant={isSubscribed(lecturer.id) ? "destructive" : "default"}
-                          size="sm"
-                        >
-                          {subscribing === lecturer.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isSubscribed(lecturer.id) ? (
-                            "Unsubscribe"
-                          ) : (
-                            "Subscribe"
-                          )}
-                        </Button>
+                          </Badge>
+                        )}
+                        <LecturerCard lecturer={lecturer} />
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
             </TabsContent>
 
-            <TabsContent value="new" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-green-500" />
-                    Recently Joined Lecturers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {getRecentlyJoined().map((lecturer) => (
-                      <div key={lecturer.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={lecturer.profileImage || "/placeholder.svg"} alt={lecturer.displayName} />
-                            <AvatarFallback className="bg-blue-100 text-blue-600">
-                              {getInitials(lecturer.displayName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium text-sm">{lecturer.displayName}</h3>
-                              {lecturer.isVerified && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                  <Award className="h-3 w-3 mr-1" />
-                                  Verified
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-600">{lecturer.department}</p>
-                            <p className="text-xs text-gray-500">Joined {formatDistanceToNow(lecturer.joinedAt)}</p>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => handleSubscribe(lecturer.id)}
-                          disabled={subscribing === lecturer.id}
-                          variant={isSubscribed(lecturer.id) ? "destructive" : "default"}
-                          size="sm"
-                        >
-                          {subscribing === lecturer.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isSubscribed(lecturer.id) ? (
-                            "Unsubscribe"
-                          ) : (
-                            "Subscribe"
-                          )}
-                        </Button>
+            <TabsContent value="new">
+              <div className="space-y-6">
+                {newLecturers.length === 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center py-8">
+                        <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No new lecturers</h3>
+                        <p className="text-gray-600">New lecturers will appear here when they join the platform.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {newLecturers.map((lecturer) => (
+                      <div key={lecturer.uid} className="relative">
+                        <Badge className="absolute -top-2 -right-2 z-10 bg-green-500">New</Badge>
+                        <LecturerCard lecturer={lecturer} />
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </div>

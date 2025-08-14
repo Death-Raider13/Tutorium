@@ -5,7 +5,6 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import NavBar from "@/components/NavBar"
-import Footer from "@/components/Footer"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -93,7 +92,6 @@ export default function RootLayout({
           <div className="min-h-screen bg-background font-sans">
             <NavBar />
             <main className="flex-1">{children}</main>
-            <Footer />
             <Toaster />
           </div>
         </ThemeProvider>
