@@ -2,153 +2,70 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth"
-import { setDoc, doc, getDoc, serverTimestamp } from "firebase/firestore"
-import { auth, db, googleProvider } from "@/lib/firebase"
-import { useAuth } from "@/hooks/useAuth"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FormField } from "@/components/ui/form-field"
-import { PasswordInput } from "@/components/ui/password-input"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Mail, User, AlertCircle, Chrome, GraduationCap } from "lucide-react"
-import Link from "next/link"
-import toast from "react-hot-toast"
-import { signupSchema, type SignupFormData } from "@/lib/validations"
-import { getErrorMessage } from "@/lib/errors"
-import { USER_ROLES } from "@/lib/constants"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
+import { GraduationCap, User, Mail, Lock, AlertCircle, Chrome, Eye, EyeOff } from "lucide-react"
 
 export default function SignupPage() {
-  const router = useRouter()
-  const { isAuthenticated, loading: authLoading } = useAuth()
-
-  const [formData, setFormData] = useState<SignupFormData>({
+  const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    role: "student",
+    role: "",
     agreeToTerms: false,
   })
-  const [errors, setErrors] = useState<Partial<Record<keyof SignupFormData, string>>>({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push("/dashboard")
-    }
-  }, [authLoading, isAuthenticated, router])
-
-  const validateField = (name: keyof SignupFormData, value: any) => {
-    try {
-      const fieldSchema = signupSchema.shape[name]
-      if (name === "confirmPassword") {
-        // Special validation for confirm password
-        if (value !== formData.password) {
-          throw new Error("Passwords don't match")
-        }
-      } else {
-        fieldSchema.parse(value)
-      }
-      setErrors((prev) => ({ ...prev, [name]: undefined }))
-    } catch (error: any) {
-      setErrors((prev) => ({ ...prev, [name]: error.message }))
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }))
     }
   }
 
-  const handleInputChange = (name: keyof SignupFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
 
-    // Real-time validation
-    if (value !== "") {
-      validateField(name, value)
-    } else {
-      setErrors((prev) => ({ ...prev, [name]: undefined }))
-    }
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required"
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required"
+    if (!formData.email.trim()) newErrors.email = "Email is required"
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid"
+    if (!formData.password) newErrors.password = "Password is required"
+    else if (formData.password.length < 8) newErrors.password = "Password must be at least 8 characters"
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords don't match"
+    if (!formData.role) newErrors.role = "Please select your role"
+    if (!formData.agreeToTerms) newErrors.agreeToTerms = "You must agree to the terms"
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  const validateForm = (): boolean => {
-    try {
-      signupSchema.parse(formData)
-      setErrors({})
-      return true
-    } catch (error: any) {
-      const fieldErrors: Partial<Record<keyof SignupFormData, string>> = {}
-      error.errors?.forEach((err: any) => {
-        if (err.path?.[0]) {
-          fieldErrors[err.path[0] as keyof SignupFormData] = err.message
-        }
-      })
-      setErrors(fieldErrors)
-      return false
-    }
-  }
-
-  const handleEmailSignup = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
 
     setLoading(true)
-    const loadingToast = toast.loading("Creating your account...")
-
     try {
-      // Create user account
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password)
-      const user = userCredential.user
-
-      // Update user profile
-      await updateProfile(user, {
-        displayName: `${formData.firstName} ${formData.lastName}`,
-      })
-
-      // Create user document in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: user.email,
-        displayName: `${formData.firstName} ${formData.lastName}`,
-        requestedRole: formData.role,
-        role: USER_ROLES.PENDING,
-        createdAt: serverTimestamp(),
-        lastLoginAt: serverTimestamp(),
-        emailVerified: false,
-        isActive: true,
-        points: 0,
-        level: 1,
-        achievements: [],
-        studyGroups: [],
-        certificates: [],
-        preferences: {
-          notifications: {
-            email: true,
-            push: true,
-            marketing: false,
-          },
-          privacy: {
-            profileVisible: true,
-            showEmail: false,
-          },
-        },
-      })
-
-      toast.dismiss(loadingToast)
-      toast.success("Account created successfully! Please verify your email.")
-      router.push("/verify-email")
-    } catch (error: any) {
-      toast.dismiss(loadingToast)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      console.log("Form submitted:", formData)
+      // Redirect to verification page or dashboard
+    } catch (error) {
       console.error("Signup error:", error)
-      const errorMessage = getErrorMessage(error)
-      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -156,73 +73,10 @@ export default function SignupPage() {
 
   const handleGoogleSignup = async () => {
     if (!formData.role) {
-      toast.error("Please select your account type first.")
+      setErrors({ role: "Please select your role first" })
       return
     }
-
-    setGoogleLoading(true)
-    const loadingToast = toast.loading("Signing up with Google...")
-
-    try {
-      const result = await signInWithPopup(auth, googleProvider)
-      const user = result.user
-
-      // Check if user document already exists
-      const userDocRef = doc(db, "users", user.uid)
-      const userDoc = await getDoc(userDocRef)
-
-      if (!userDoc.exists()) {
-        // Create new user document
-        const nameParts = user.displayName?.split(" ") || ["", ""]
-        await setDoc(userDocRef, {
-          firstName: nameParts[0] || "",
-          lastName: nameParts.slice(1).join(" ") || "",
-          email: user.email,
-          displayName: user.displayName || "",
-          requestedRole: formData.role,
-          role: USER_ROLES.PENDING,
-          createdAt: serverTimestamp(),
-          lastLoginAt: serverTimestamp(),
-          emailVerified: user.emailVerified,
-          isActive: true,
-          points: 0,
-          level: 1,
-          achievements: [],
-          studyGroups: [],
-          certificates: [],
-          preferences: {
-            notifications: {
-              email: true,
-              push: true,
-              marketing: false,
-            },
-            privacy: {
-              profileVisible: true,
-              showEmail: false,
-            },
-          },
-        })
-      }
-
-      toast.dismiss(loadingToast)
-      toast.success("Account created with Google!")
-      router.push("/dashboard")
-    } catch (error: any) {
-      toast.dismiss(loadingToast)
-      console.error("Google signup error:", error)
-      const errorMessage = getErrorMessage(error)
-      toast.error(errorMessage)
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <LoadingSpinner size="lg" text="Loading..." />
-      </div>
-    )
+    console.log("Google signup with role:", formData.role)
   }
 
   return (
@@ -240,50 +94,62 @@ export default function SignupPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <form onSubmit={handleEmailSignup} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="First Name" error={errors.firstName} required>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
                   <Input
+                    id="firstName"
                     placeholder="John"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange("firstName", e.target.value)}
                     disabled={loading}
+                    className={errors.firstName ? "border-red-500" : ""}
                   />
-                </FormField>
-                <FormField label="Last Name" error={errors.lastName} required>
+                  {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
                   <Input
+                    id="lastName"
                     placeholder="Doe"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange("lastName", e.target.value)}
                     disabled={loading}
+                    className={errors.lastName ? "border-red-500" : ""}
                   />
-                </FormField>
+                  {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
+                </div>
               </div>
 
               {/* Email */}
-              <FormField label="Email Address" error={errors.email} required>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
+                    id="email"
                     type="email"
                     placeholder="john@example.com"
-                    className="pl-10"
+                    className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     disabled={loading}
                   />
                 </div>
-              </FormField>
+                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+              </div>
 
               {/* Role Selection */}
-              <FormField label="I am a" error={errors.role} required>
+              <div className="space-y-2">
+                <Label htmlFor="role">I am a *</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value: "student" | "lecturer") => handleInputChange("role", value)}
+                  onValueChange={(value) => handleInputChange("role", value)}
                   disabled={loading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={errors.role ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -301,51 +167,74 @@ export default function SignupPage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </FormField>
+                {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
+              </div>
 
               {/* Password */}
-              <FormField
-                label="Password"
-                error={errors.password}
-                required
-                description="Must be at least 8 characters with uppercase, lowercase, number, and special character"
-              >
-                <PasswordInput
-                  placeholder="Create a strong password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  disabled={loading}
-                  showStrength
-                />
-              </FormField>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a strong password"
+                    className={`pl-10 pr-10 ${errors.password ? "border-red-500" : ""}`}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                <p className="text-xs text-gray-500">
+                  Must be at least 8 characters with uppercase, lowercase, number, and special character
+                </p>
+              </div>
 
               {/* Confirm Password */}
-              <FormField
-                label="Confirm Password"
-                error={errors.confirmPassword}
-                success={
-                  formData.confirmPassword && formData.password === formData.confirmPassword
-                    ? "Passwords match"
-                    : undefined
-                }
-                required
-              >
-                <PasswordInput
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                  disabled={loading}
-                />
-              </FormField>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    className={`pl-10 pr-10 ${errors.confirmPassword ? "border-red-500" : ""}`}
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+                {formData.confirmPassword &&
+                  formData.password === formData.confirmPassword &&
+                  !errors.confirmPassword && <p className="text-sm text-green-500">Passwords match ✓</p>}
+              </div>
 
               {/* Terms Agreement */}
-              <FormField error={errors.agreeToTerms}>
+              <div className="space-y-2">
                 <div className="flex items-start space-x-2">
                   <Checkbox
                     id="agreeToTerms"
                     checked={formData.agreeToTerms}
-                    onCheckedChange={(checked) => handleInputChange("agreeToTerms", checked)}
+                    onCheckedChange={(checked) => handleInputChange("agreeToTerms", checked as boolean)}
                     disabled={loading}
+                    className={errors.agreeToTerms ? "border-red-500" : ""}
                   />
                   <label htmlFor="agreeToTerms" className="text-sm leading-5 text-gray-700">
                     I agree to the{" "}
@@ -358,17 +247,14 @@ export default function SignupPage() {
                     </Link>
                   </label>
                 </div>
-              </FormField>
+                {errors.agreeToTerms && <p className="text-sm text-red-500">{errors.agreeToTerms}</p>}
+              </div>
 
               {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700"
-                disabled={loading || googleLoading}
-              >
+              <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700" disabled={loading}>
                 {loading ? (
                   <>
-                    <LoadingSpinner size="sm" className="mr-2" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Creating Account...
                   </>
                 ) : (
@@ -396,19 +282,10 @@ export default function SignupPage() {
               variant="outline"
               className="w-full h-11 bg-transparent"
               onClick={handleGoogleSignup}
-              disabled={loading || googleLoading || !formData.role}
+              disabled={loading || !formData.role}
             >
-              {googleLoading ? (
-                <>
-                  <LoadingSpinner size="sm" className="mr-2" />
-                  Signing up...
-                </>
-              ) : (
-                <>
-                  <Chrome className="h-4 w-4 mr-2" />
-                  Continue with Google
-                </>
-              )}
+              <Chrome className="h-4 w-4 mr-2" />
+              Continue with Google
             </Button>
 
             {!formData.role && (

@@ -4,7 +4,6 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
-import { ErrorBoundary } from "@/components/ui/error-boundary"
 import NavBar from "@/components/NavBar"
 import Footer from "@/components/Footer"
 
@@ -90,16 +89,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className={`${inter.className} antialiased`}>
-        <ErrorBoundary>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            <div className="min-h-screen bg-background font-sans">
-              <NavBar />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <Toaster />
-            </div>
-          </ThemeProvider>
-        </ErrorBoundary>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <div className="min-h-screen bg-background font-sans">
+            <NavBar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <Toaster />
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   )

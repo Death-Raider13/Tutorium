@@ -1,583 +1,404 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-  collection,
-  query,
-  onSnapshot,
-  addDoc,
-  updateDoc,
-  doc,
-  arrayUnion,
-  arrayRemove,
-  where,
-  orderBy,
-  serverTimestamp,
-} from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { useAuth } from "@/hooks/useAuth"
-import AuthGuard from "@/components/AuthGuard"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Users, Plus, Search, MapPin, MessageSquare, Calendar, UserPlus, UserMinus } from "lucide-react"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import toast from "react-hot-toast"
-
-interface StudyGroup {
-  id: string
-  name: string
-  description: string
-  subject: string
-  level: "beginner" | "intermediate" | "advanced"
-  maxMembers: number
-  members: string[]
-  createdBy: string
-  createdAt: Date
-  isActive: boolean
-  meetingSchedule?: string
-  location?: string
-  tags: string[]
-  lastActivity: Date
-}
-
-const SUBJECTS = [
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "Computer Science",
-  "Engineering",
-  "Economics",
-  "Literature",
-  "History",
-  "Psychology",
-  "Other",
-]
-
-const LEVELS = [
-  { value: "beginner", label: "Beginner", color: "bg-green-100 text-green-800" },
-  { value: "intermediate", label: "Intermediate", color: "bg-yellow-100 text-yellow-800" },
-  { value: "advanced", label: "Advanced", color: "bg-red-100 text-red-800" },
-]
+import { Search, Users, Calendar, Clock, MapPin, Plus, MessageSquare, Video, Globe, Lock } from "lucide-react"
 
 export default function StudyGroupsPage() {
-  const { user, isStudent, isLecturer } = useAuth()
-  const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([])
-  const [filteredGroups, setFilteredGroups] = useState<StudyGroup[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("all")
-  const [selectedLevel, setSelectedLevel] = useState("all")
-  const [newGroup, setNewGroup] = useState({
-    name: "",
-    description: "",
-    subject: "",
-    level: "beginner" as const,
-    maxMembers: 10,
-    meetingSchedule: "",
-    location: "",
-    tags: "",
+  const [selectedType, setSelectedType] = useState("all")
+
+  const studyGroups = [
+    {
+      id: 1,
+      name: "Structural Analysis Study Group",
+      description: "Weekly sessions focusing on beam analysis, moment diagrams, and structural design principles.",
+      subject: "Civil Engineering",
+      type: "Online",
+      members: 24,
+      maxMembers: 30,
+      meetingTime: "Saturdays 2:00 PM",
+      nextMeeting: "Tomorrow",
+      moderator: {
+        name: "Dr. Adebayo Ogundimu",
+        avatar: "/placeholder-user.jpg",
+        title: "Professor",
+      },
+      tags: ["structural-analysis", "beams", "design"],
+      isPrivate: false,
+      difficulty: "Intermediate",
+      language: "English",
+    },
+    {
+      id: 2,
+      name: "Thermodynamics Problem Solving",
+      description: "Collaborative problem-solving sessions for thermodynamics concepts and applications.",
+      subject: "Mechanical Engineering",
+      type: "Hybrid",
+      members: 18,
+      maxMembers: 25,
+      meetingTime: "Wednesdays 4:00 PM",
+      nextMeeting: "In 3 days",
+      moderator: {
+        name: "Prof. Fatima Al-Rashid",
+        avatar: "/placeholder-user.jpg",
+        title: "Professor",
+      },
+      tags: ["thermodynamics", "problem-solving", "heat-transfer"],
+      isPrivate: false,
+      difficulty: "Advanced",
+      language: "English",
+    },
+    {
+      id: 3,
+      name: "Circuit Design Workshop",
+      description: "Hands-on circuit design and analysis with practical applications and simulations.",
+      subject: "Electrical Engineering",
+      type: "In-Person",
+      members: 15,
+      maxMembers: 20,
+      meetingTime: "Fridays 3:00 PM",
+      nextMeeting: "This Friday",
+      location: "Engineering Lab 204",
+      moderator: {
+        name: "Dr. Chinedu Okwu",
+        avatar: "/placeholder-user.jpg",
+        title: "Lecturer",
+      },
+      tags: ["circuits", "design", "simulation"],
+      isPrivate: false,
+      difficulty: "Beginner",
+      language: "English",
+    },
+    {
+      id: 4,
+      name: "Chemical Process Design",
+      description: "Advanced study group for chemical process design, optimization, and safety considerations.",
+      subject: "Chemical Engineering",
+      type: "Online",
+      members: 12,
+      maxMembers: 15,
+      meetingTime: "Tuesdays 6:00 PM",
+      nextMeeting: "Next week",
+      moderator: {
+        name: "Dr. Amina Hassan",
+        avatar: "/placeholder-user.jpg",
+        title: "Associate Professor",
+      },
+      tags: ["process-design", "optimization", "safety"],
+      isPrivate: true,
+      difficulty: "Advanced",
+      language: "English",
+    },
+    {
+      id: 5,
+      name: "Programming for Engineers",
+      description: "Learn programming fundamentals with applications in engineering problem-solving.",
+      subject: "Computer Engineering",
+      type: "Online",
+      members: 32,
+      maxMembers: 40,
+      meetingTime: "Sundays 1:00 PM",
+      nextMeeting: "This Sunday",
+      moderator: {
+        name: "Dr. Kola Akinwale",
+        avatar: "/placeholder-user.jpg",
+        title: "Senior Lecturer",
+      },
+      tags: ["programming", "python", "matlab", "problem-solving"],
+      isPrivate: false,
+      difficulty: "Beginner",
+      language: "English",
+    },
+    {
+      id: 6,
+      name: "Petroleum Reservoir Modeling",
+      description: "Advanced reservoir modeling techniques and simulation software training.",
+      subject: "Petroleum Engineering",
+      type: "Hybrid",
+      members: 8,
+      maxMembers: 12,
+      meetingTime: "Thursdays 5:00 PM",
+      nextMeeting: "Next Thursday",
+      moderator: {
+        name: "Dr. Musa Abdullahi",
+        avatar: "/placeholder-user.jpg",
+        title: "Professor",
+      },
+      tags: ["reservoir", "modeling", "simulation"],
+      isPrivate: true,
+      difficulty: "Advanced",
+      language: "English",
+    },
+  ]
+
+  const subjects = [
+    "All Subjects",
+    "Civil Engineering",
+    "Mechanical Engineering",
+    "Electrical Engineering",
+    "Chemical Engineering",
+    "Computer Engineering",
+    "Petroleum Engineering",
+  ]
+
+  const types = ["All Types", "Online", "In-Person", "Hybrid"]
+
+  const filteredGroups = studyGroups.filter((group) => {
+    const matchesSearch =
+      group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      group.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      group.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    const matchesSubject = selectedSubject === "all" || group.subject === selectedSubject
+    const matchesType = selectedType === "all" || group.type === selectedType
+
+    return matchesSearch && matchesSubject && matchesType
   })
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
-
-    const studyGroupsQuery = query(
-      collection(db, "studyGroups"),
-      where("isActive", "==", true),
-      orderBy("lastActivity", "desc"),
-    )
-
-    const unsubscribe = onSnapshot(
-      studyGroupsQuery,
-      (snapshot) => {
-        const groupsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-          lastActivity: doc.data().lastActivity?.toDate() || new Date(),
-        })) as StudyGroup[]
-
-        setStudyGroups(groupsData)
-        setFilteredGroups(groupsData)
-        setLoading(false)
-      },
-      (error) => {
-        console.error("Error fetching study groups:", error)
-        setLoading(false)
-        toast.error("Failed to load study groups")
-      },
-    )
-
-    return () => unsubscribe()
-  }, [user])
-
-  useEffect(() => {
-    let filtered = studyGroups
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (group) =>
-          group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          group.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          group.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
-      )
-    }
-
-    // Filter by subject
-    if (selectedSubject !== "all") {
-      filtered = filtered.filter((group) => group.subject === selectedSubject)
-    }
-
-    // Filter by level
-    if (selectedLevel !== "all") {
-      filtered = filtered.filter((group) => group.level === selectedLevel)
-    }
-
-    setFilteredGroups(filtered)
-  }, [studyGroups, searchTerm, selectedSubject, selectedLevel])
-
-  const handleCreateGroup = async () => {
-    if (!user) return
-
-    if (!newGroup.name.trim() || !newGroup.description.trim() || !newGroup.subject) {
-      toast.error("Please fill in all required fields")
-      return
-    }
-
-    try {
-      const groupData = {
-        ...newGroup,
-        members: [user.uid],
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-        lastActivity: serverTimestamp(),
-        isActive: true,
-        tags: newGroup.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0),
-      }
-
-      await addDoc(collection(db, "studyGroups"), groupData)
-      toast.success("Study group created successfully!")
-      setShowCreateDialog(false)
-      setNewGroup({
-        name: "",
-        description: "",
-        subject: "",
-        level: "beginner",
-        maxMembers: 10,
-        meetingSchedule: "",
-        location: "",
-        tags: "",
-      })
-    } catch (error) {
-      console.error("Error creating study group:", error)
-      toast.error("Failed to create study group")
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "Online":
+        return <Globe className="h-4 w-4" />
+      case "In-Person":
+        return <MapPin className="h-4 w-4" />
+      case "Hybrid":
+        return <Video className="h-4 w-4" />
+      default:
+        return <Users className="h-4 w-4" />
     }
   }
 
-  const handleJoinGroup = async (groupId: string) => {
-    if (!user) return
-
-    try {
-      const groupRef = doc(db, "studyGroups", groupId)
-      await updateDoc(groupRef, {
-        members: arrayUnion(user.uid),
-        lastActivity: serverTimestamp(),
-      })
-      toast.success("Successfully joined the study group!")
-    } catch (error) {
-      console.error("Error joining group:", error)
-      toast.error("Failed to join study group")
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Beginner":
+        return "bg-green-100 text-green-800"
+      case "Intermediate":
+        return "bg-yellow-100 text-yellow-800"
+      case "Advanced":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
     }
-  }
-
-  const handleLeaveGroup = async (groupId: string) => {
-    if (!user) return
-
-    if (!confirm("Are you sure you want to leave this study group?")) {
-      return
-    }
-
-    try {
-      const groupRef = doc(db, "studyGroups", groupId)
-      await updateDoc(groupRef, {
-        members: arrayRemove(user.uid),
-        lastActivity: serverTimestamp(),
-      })
-      toast.success("Successfully left the study group")
-    } catch (error) {
-      console.error("Error leaving group:", error)
-      toast.error("Failed to leave study group")
-    }
-  }
-
-  const getLevelBadge = (level: string) => {
-    const levelConfig = LEVELS.find((l) => l.value === level)
-    return levelConfig || LEVELS[0]
-  }
-
-  const isUserInGroup = (group: StudyGroup) => {
-    return user && group.members.includes(user.uid)
-  }
-
-  const canJoinGroup = (group: StudyGroup) => {
-    return user && !isUserInGroup(group) && group.members.length < group.maxMembers
-  }
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <LoadingSpinner size="lg" text="Loading study groups..." />
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-96">
-          <CardContent className="pt-6 text-center">
-            <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Sign in required</h3>
-            <p className="text-gray-600 mb-6">Please sign in to view and join study groups</p>
-            <Button asChild>
-              <a href="/login">Sign In</a>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                  <Users className="h-8 w-8 text-blue-600" />
-                  Study Groups
-                </h1>
-                <p className="text-gray-600 mt-1">Join study groups and collaborate with fellow learners</p>
-              </div>
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Group
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Create New Study Group</DialogTitle>
-                    <DialogDescription>Start a new study group and invite others to join</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Group Name *</Label>
-                      <Input
-                        id="name"
-                        value={newGroup.name}
-                        onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
-                        placeholder="e.g., Calculus Study Group"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description *</Label>
-                      <Textarea
-                        id="description"
-                        value={newGroup.description}
-                        onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
-                        placeholder="Describe what your group will focus on..."
-                        rows={3}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="subject">Subject *</Label>
-                        <Select
-                          value={newGroup.subject}
-                          onValueChange={(value) => setNewGroup({ ...newGroup, subject: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select subject" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SUBJECTS.map((subject) => (
-                              <SelectItem key={subject} value={subject}>
-                                {subject}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="level">Level</Label>
-                        <Select
-                          value={newGroup.level}
-                          onValueChange={(value: any) => setNewGroup({ ...newGroup, level: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LEVELS.map((level) => (
-                              <SelectItem key={level.value} value={level.value}>
-                                {level.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="maxMembers">Max Members</Label>
-                      <Input
-                        id="maxMembers"
-                        type="number"
-                        value={newGroup.maxMembers}
-                        onChange={(e) =>
-                          setNewGroup({ ...newGroup, maxMembers: Number.parseInt(e.target.value) || 10 })
-                        }
-                        min="2"
-                        max="50"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="schedule">Meeting Schedule (Optional)</Label>
-                      <Input
-                        id="schedule"
-                        value={newGroup.meetingSchedule}
-                        onChange={(e) => setNewGroup({ ...newGroup, meetingSchedule: e.target.value })}
-                        placeholder="e.g., Tuesdays 7PM"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="location">Location (Optional)</Label>
-                      <Input
-                        id="location"
-                        value={newGroup.location}
-                        onChange={(e) => setNewGroup({ ...newGroup, location: e.target.value })}
-                        placeholder="e.g., Library Room 201 or Online"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="tags">Tags (Optional)</Label>
-                      <Input
-                        id="tags"
-                        value={newGroup.tags}
-                        onChange={(e) => setNewGroup({ ...newGroup, tags: e.target.value })}
-                        placeholder="e.g., exam prep, homework help"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Separate tags with commas</p>
-                    </div>
-                    <Button onClick={handleCreateGroup} className="w-full">
-                      Create Study Group
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Study Groups</h1>
+            <p className="text-gray-600">Join collaborative learning sessions with peers and expert guidance</p>
           </div>
+          <Button className="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Group
+          </Button>
+        </div>
 
-          {/* Filters */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Search and Filters */}
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    placeholder="Search groups..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search study groups..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
                   />
                 </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Subjects" />
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Subject" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Subjects</SelectItem>
-                    {SUBJECTS.map((subject) => (
+                    {subjects.slice(1).map((subject) => (
                       <SelectItem key={subject} value={subject}>
                         {subject}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Levels" />
+
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    {LEVELS.map((level) => (
-                      <SelectItem key={level.value} value={level.value}>
-                        {level.label}
+                    {types.map((type) => (
+                      <SelectItem key={type} value={type === "All Types" ? "all" : type}>
+                        {type}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Users className="h-4 w-4 mr-1" />
-                  {filteredGroups.length} groups found
-                </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">{studyGroups.length}</div>
+              <div className="text-sm text-gray-600">Active Groups</div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {studyGroups.reduce((sum, group) => sum + group.members, 0)}
+              </div>
+              <div className="text-sm text-gray-600">Total Members</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {studyGroups.filter((group) => group.type === "Online").length}
+              </div>
+              <div className="text-sm text-gray-600">Online Groups</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {studyGroups.filter((group) => !group.isPrivate).length}
+              </div>
+              <div className="text-sm text-gray-600">Open Groups</div>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Study Groups Grid */}
-          {filteredGroups.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-12">
-                  <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No study groups found</h3>
-                  <p className="text-gray-600 mb-6">
-                    {searchTerm || selectedSubject !== "all" || selectedLevel !== "all"
-                      ? "Try adjusting your filters to find more groups"
-                      : "Be the first to create a study group!"}
-                  </p>
-                  <Button onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create First Group
+        {/* Study Groups Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredGroups.map((group) => (
+            <Card key={group.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    {getTypeIcon(group.type)}
+                    <Badge variant="outline" className="text-xs">
+                      {group.type}
+                    </Badge>
+                    {group.isPrivate && <Lock className="h-4 w-4 text-gray-400" />}
+                  </div>
+                  <Badge className={`text-xs ${getDifficultyColor(group.difficulty)}`}>{group.difficulty}</Badge>
+                </div>
+                <CardTitle className="text-lg">{group.name}</CardTitle>
+                <CardDescription className="line-clamp-2">{group.description}</CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Subject and Tags */}
+                <div>
+                  <Badge variant="secondary" className="mb-2">
+                    {group.subject}
+                  </Badge>
+                  <div className="flex flex-wrap gap-1">
+                    {group.tags.slice(0, 3).map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {group.tags.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{group.tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Moderator */}
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={group.moderator.avatar || "/placeholder.svg"} />
+                    <AvatarFallback className="text-xs">
+                      {group.moderator.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{group.moderator.name}</p>
+                    <p className="text-xs text-gray-500">{group.moderator.title}</p>
+                  </div>
+                </div>
+
+                {/* Meeting Info */}
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4" />
+                    <span>{group.meetingTime}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Next: {group.nextMeeting}</span>
+                  </div>
+                  {group.location && (
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>{group.location}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Members */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Users className="h-4 w-4" />
+                    <span>
+                      {group.members}/{group.maxMembers} members
+                    </span>
+                  </div>
+                  <div className="w-24 bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full"
+                      style={{ width: `${(group.members / group.maxMembers) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex space-x-2">
+                  <Button className="flex-1" size="sm" asChild>
+                    <Link href={`/study-groups/${group.id}`}>{group.isPrivate ? "Request to Join" : "Join Group"}</Link>
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <MessageSquare className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredGroups.map((group) => {
-                const levelBadge = getLevelBadge(group.level)
-                const isMember = isUserInGroup(group)
-                const canJoin = canJoinGroup(group)
-                const isFull = group.members.length >= group.maxMembers
+          ))}
+        </div>
 
-                return (
-                  <Card key={group.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg mb-2">{group.name}</CardTitle>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline">{group.subject}</Badge>
-                            <Badge className={levelBadge.color}>{levelBadge.label}</Badge>
-                            {isFull && <Badge variant="destructive">Full</Badge>}
-                          </div>
-                        </div>
-                        {isMember && (
-                          <Badge className="bg-green-100 text-green-800">
-                            <UserPlus className="h-3 w-3 mr-1" />
-                            Member
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="line-clamp-2">{group.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center text-gray-600">
-                            <Users className="h-4 w-4 mr-1" />
-                            {group.members.length}/{group.maxMembers} members
-                          </span>
-                          <span className="text-gray-500">{formatDate(group.lastActivity)}</span>
-                        </div>
-
-                        {group.meetingSchedule && (
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {group.meetingSchedule}
-                          </div>
-                        )}
-
-                        {group.location && (
-                          <div className="flex items-center text-sm text-gray-600">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {group.location}
-                          </div>
-                        )}
-
-                        {group.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {group.tags.slice(0, 3).map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {group.tags.length > 3 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{group.tags.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="pt-2">
-                          {isMember ? (
-                            <div className="flex gap-2">
-                              <Button variant="outline" className="flex-1 bg-transparent">
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                View Group
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleLeaveGroup(group.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <UserMinus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : canJoin ? (
-                            <Button onClick={() => handleJoinGroup(group.id)} className="w-full">
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              Join Group
-                            </Button>
-                          ) : (
-                            <Button disabled className="w-full">
-                              {isFull ? "Group Full" : "Cannot Join"}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
+        {/* Load More */}
+        <div className="text-center mt-8">
+          <Button variant="outline" size="lg">
+            Load More Groups
+          </Button>
         </div>
       </div>
-    </AuthGuard>
+    </div>
   )
 }

@@ -14,94 +14,31 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { Menu, Bell, Search, BookOpen, MessageSquare, Users, GraduationCap, Settings, LogOut, User } from "lucide-react"
-
-// Mock user data for development
-const mockUser = {
-  uid: "mock-user-id",
-  email: "john.doe@example.com",
-  displayName: "John Doe",
-  profileImage: null,
-  role: "student" as const,
-  emailVerified: true,
-  points: 1250,
-  level: 3,
-}
+import { Menu, Bell, Search, Settings, LogOut, User } from "lucide-react"
 
 // Mock auth hook for development
 const useAuth = () => {
   return {
-    user: mockUser,
-    isAuthenticated: true,
+    user: null,
+    isAuthenticated: false,
     isLoading: false,
-    isAdmin: false,
-    isLecturer: false,
-    isStudent: true,
     signOut: async () => {
       console.log("Sign out clicked")
     },
   }
 }
 
-const getInitials = (name: string | null | undefined): string => {
-  if (!name || typeof name !== "string") return "U"
-
-  try {
-    const parts = name.trim().split(" ")
-    if (parts.length === 0) return "U"
-
-    const initials = parts
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("")
-
-    return initials || "U"
-  } catch (error) {
-    console.error("Error generating initials:", error)
-    return "U"
-  }
-}
-
-const USER_ROLES = {
-  ADMIN: "admin",
-  LECTURER: "lecturer",
-  STUDENT: "student",
-  PENDING: "pending",
-} as const
-
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
-  const { user, isAuthenticated, isLoading, isAdmin, isLecturer, isStudent, signOut } = useAuth()
+  const { user, isAuthenticated, isLoading, signOut } = useAuth()
 
   const navigation = [
-    { name: "Home", href: "/", icon: null },
-    { name: "Lessons", href: "/lessons", icon: BookOpen },
-    { name: "Questions", href: "/questions", icon: MessageSquare },
-    { name: "Study Groups", href: "/study-groups", icon: Users },
+    { name: "Home", href: "/" },
+    { name: "Lessons", href: "/lessons" },
+    { name: "Questions", href: "/questions" },
+    { name: "Study Groups", href: "/study-groups" },
   ]
-
-  const userNavigation = isAuthenticated
-    ? [
-        ...(isStudent
-          ? [
-              { name: "Dashboard", href: "/student/dashboard", icon: User },
-              { name: "Find Lecturers", href: "/student/lecturers", icon: GraduationCap },
-            ]
-          : []),
-        ...(isLecturer
-          ? [
-              { name: "Dashboard", href: "/lecturer/dashboard", icon: User },
-              { name: "Upload Content", href: "/lecturer/upload", icon: BookOpen },
-              { name: "My Students", href: "/lecturer/students", icon: Users },
-              { name: "Analytics", href: "/lecturer/analytics", icon: Settings },
-            ]
-          : []),
-        ...(isAdmin ? [{ name: "Admin Panel", href: "/admin", icon: Settings }] : []),
-        { name: "Profile", href: "/profile", icon: User },
-        { name: "Achievements", href: "/achievements", icon: GraduationCap },
-      ]
-    : []
 
   const handleSignOut = async () => {
     try {
@@ -146,23 +83,19 @@ export default function NavBar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === item.href
-                      ? "text-blue-600 bg-blue-50"
-                      : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {Icon && <Icon className="h-4 w-4" />}
-                  <span>{item.name}</span>
-                </Link>
-              )
-            })}
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  pathname === item.href
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
           </div>
 
           {/* Right side */}
@@ -190,7 +123,7 @@ export default function NavBar() {
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.profileImage || undefined} alt={user.displayName || "User"} />
                       <AvatarFallback className="bg-blue-600 text-white">
-                        {getInitials(user.displayName)}
+                        {user.displayName?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -200,30 +133,21 @@ export default function NavBar() {
                     <div className="flex flex-col space-y-1 leading-none">
                       <p className="font-medium">{user.displayName || "User"}</p>
                       <p className="w-[200px] truncate text-sm text-muted-foreground">{user.email}</p>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {(user.role || "pending").charAt(0).toUpperCase() + (user.role || "pending").slice(1)}
-                        </Badge>
-                        {user.points && (
-                          <Badge variant="outline" className="text-xs">
-                            {user.points} pts
-                          </Badge>
-                        )}
-                      </div>
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  {userNavigation.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <DropdownMenuItem key={item.name} asChild>
-                        <Link href={item.href} className="flex items-center space-x-2">
-                          {Icon && <Icon className="h-4 w-4" />}
-                          <span>{item.name}</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )
-                  })}
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center space-x-2">
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex items-center space-x-2">
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
                     <LogOut className="h-4 w-4 mr-2" />
@@ -251,54 +175,20 @@ export default function NavBar() {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col space-y-4 mt-4">
-                  {navigation.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        onClick={() => setIsOpen(false)}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          pathname === item.href
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {Icon && <Icon className="h-4 w-4" />}
-                        <span>{item.name}</span>
-                      </Link>
-                    )
-                  })}
-
-                  {isAuthenticated && userNavigation.length > 0 && (
-                    <>
-                      <div className="border-t pt-4">
-                        <p className="text-sm font-medium text-gray-500 mb-2">Account</p>
-                        {userNavigation.map((item) => {
-                          const Icon = item.icon
-                          return (
-                            <Link
-                              key={item.name}
-                              href={item.href}
-                              onClick={() => setIsOpen(false)}
-                              className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
-                            >
-                              {Icon && <Icon className="h-4 w-4" />}
-                              <span>{item.name}</span>
-                            </Link>
-                          )
-                        })}
-                        <Button
-                          variant="ghost"
-                          onClick={handleSignOut}
-                          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 mt-2"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Sign out
-                        </Button>
-                      </div>
-                    </>
-                  )}
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        pathname === item.href
+                          ? "text-blue-600 bg-blue-50"
+                          : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
 
                   {!isAuthenticated && (
                     <div className="border-t pt-4 space-y-2">

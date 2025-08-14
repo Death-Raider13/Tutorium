@@ -10,7 +10,6 @@ import {
   GraduationCap,
   Star,
   CheckCircle,
-  ArrowRight,
   Play,
   Award,
   Target,
@@ -40,9 +39,11 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-3">
-                  <GraduationCap className="mr-2 h-5 w-5" />
-                  Start Learning Free
+                <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-3" asChild>
+                  <Link href="/signup">
+                    <GraduationCap className="mr-2 h-5 w-5" />
+                    Start Learning Free
+                  </Link>
                 </Button>
                 <Button
                   size="lg"
@@ -206,131 +207,6 @@ export default function HomePage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Popular Subjects */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Popular Engineering Subjects</h2>
-            <p className="text-xl text-gray-600">Explore our most sought-after engineering disciplines</p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {[
-              { name: "Civil Engineering", count: "1,234 lessons", color: "bg-blue-500" },
-              { name: "Mechanical", count: "987 lessons", color: "bg-green-500" },
-              { name: "Electrical", count: "856 lessons", color: "bg-yellow-500" },
-              { name: "Chemical", count: "654 lessons", color: "bg-purple-500" },
-              { name: "Computer", count: "1,123 lessons", color: "bg-red-500" },
-              { name: "Petroleum", count: "432 lessons", color: "bg-indigo-500" },
-            ].map((subject) => (
-              <Card key={subject.name} className="text-center hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <div
-                    className={`w-12 h-12 ${subject.color} rounded-lg mx-auto mb-4 flex items-center justify-center`}
-                  >
-                    <GraduationCap className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-1">{subject.name}</h3>
-                  <p className="text-sm text-gray-500">{subject.count}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Lecturers */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Learn from the Best</h2>
-            <p className="text-xl text-gray-600">Our certified lecturers from top Nigerian universities</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Dr. Adebayo Ogundimu",
-                title: "Professor of Structural Engineering",
-                university: "University of Ibadan",
-                rating: 4.9,
-                students: 1234,
-                image: "/placeholder-user.jpg",
-                specialties: ["Structural Analysis", "Concrete Design", "Steel Structures"],
-              },
-              {
-                name: "Prof. Fatima Al-Rashid",
-                title: "Chemical Engineering Expert",
-                university: "Ahmadu Bello University",
-                rating: 4.8,
-                students: 987,
-                image: "/placeholder-user.jpg",
-                specialties: ["Process Design", "Thermodynamics", "Mass Transfer"],
-              },
-              {
-                name: "Dr. Chukwuma Okafor",
-                title: "Electrical Engineering Specialist",
-                university: "University of Nigeria, Nsukka",
-                rating: 4.9,
-                students: 1456,
-                image: "/placeholder-user.jpg",
-                specialties: ["Power Systems", "Control Systems", "Electronics"],
-              },
-            ].map((lecturer) => (
-              <Card key={lecturer.name} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <Avatar className="h-16 w-16">
-                      <AvatarImage src={lecturer.image || "/placeholder.svg"} />
-                      <AvatarFallback className="bg-blue-600 text-white text-lg">
-                        {lecturer.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{lecturer.name}</h3>
-                      <p className="text-sm text-gray-600">{lecturer.title}</p>
-                      <p className="text-sm text-blue-600">{lecturer.university}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-1">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="font-medium">{lecturer.rating}</span>
-                      <span className="text-sm text-gray-500">({lecturer.students} students)</span>
-                    </div>
-                    <Badge variant="secondary">Verified</Badge>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-700">Specialties:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {lecturer.specialties.map((specialty) => (
-                        <Badge key={specialty} variant="outline" className="text-xs">
-                          {specialty}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="text-center mt-12">
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/student/lecturers">
-                View All Lecturers
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
           </div>
         </div>
       </section>

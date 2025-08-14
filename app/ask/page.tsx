@@ -3,126 +3,98 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { addDoc, collection, serverTimestamp } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { useAuth } from "@/hooks/useAuth"
-import AuthGuard from "@/components/AuthGuard"
-import toast from "react-hot-toast"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { HelpCircle, AlertCircle, CheckCircle, Lightbulb } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { HelpCircle, Upload, X, AlertCircle, CheckCircle, Lightbulb, BookOpen, MessageSquare, Tag } from "lucide-react"
 
-interface QuestionForm {
-  title: string
-  description: string
-  subject: string
-  tags: string[]
-  urgency: "low" | "medium" | "high"
-}
-
-const SUBJECTS = [
-  { value: "mechanical", label: "Mechanical Engineering" },
-  { value: "civil", label: "Civil Engineering" },
-  { value: "electrical", label: "Electrical Engineering" },
-  { value: "chemical", label: "Chemical Engineering" },
-  { value: "computer", label: "Computer Engineering" },
-  { value: "aerospace", label: "Aerospace Engineering" },
-  { value: "biomedical", label: "Biomedical Engineering" },
-  { value: "environmental", label: "Environmental Engineering" },
-]
-
-const COMMON_TAGS = [
-  "thermodynamics",
-  "mechanics",
-  "circuits",
-  "structures",
-  "materials",
-  "fluid-dynamics",
-  "programming",
-  "design",
-  "analysis",
-  "theory",
-]
-
-export default function AskPage() {
-  const router = useRouter()
-  const { user } = useAuth()
-
-  const [formData, setFormData] = useState<QuestionForm>({
+export default function AskQuestionPage() {
+  const [formData, setFormData] = useState({
     title: "",
-    description: "",
+    content: "",
     subject: "",
-    tags: [],
-    urgency: "medium",
+    tags: [] as string[],
+    urgency: "normal",
+    attachments: [] as File[],
   })
+  const [currentTag, setCurrentTag] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [customTag, setCustomTag] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const validateForm = (): boolean => {
-    if (!formData.title.trim()) {
-      setError("Question title is required")
-      return false
-    }
-    if (formData.title.length < 10) {
-      setError("Question title should be at least 10 characters long")
-      return false
-    }
-    if (!formData.description.trim()) {
-      setError("Question description is required")
-      return false
-    }
-    if (formData.description.length < 20) {
-      setError("Please provide more details in your description (at least 20 characters)")
-      return false
-    }
-    if (!formData.subject) {
-      setError("Please select a subject area")
-      return false
-    }
-    return true
-  }
+  const subjects = [
+    "Civil Engineering",
+    "Mechanical Engineering",
+    "Electrical Engineering",
+    "Chemical Engineering",
+    "Computer Engineering",
+    "Petroleum Engineering",
+  ]
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    if (error) setError("")
-  }
+  const suggestedTags = [
+    "structural-analysis",
+    "thermodynamics",
+    "circuits",
+    "fluid-mechanics",
+    "programming",
+    "design",
+    "calculations",
+    "theory",
+    "practical",
+    "homework-help",
+  ]
 
-  const handleSubjectChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, subject: value }))
-    if (error) setError("")
-  }
-
-  const handleUrgencyChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, urgency: value as "low" | "medium" | "high" }))
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }))
+    }
   }
 
   const addTag = (tag: string) => {
     if (tag && !formData.tags.includes(tag) && formData.tags.length < 5) {
       setFormData((prev) => ({ ...prev, tags: [...prev.tags, tag] }))
+      setCurrentTag("")
     }
   }
 
   const removeTag = (tagToRemove: string) => {
+    setFormData((prev) => ({ ...prev, tags: prev.tags.filter((tag) => tag !== tagToRemove) }))
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+    if (files.length + formData.attachments.length <= 3) {
+      setFormData((prev) => ({ ...prev, attachments: [...prev.attachments, ...files] }))
+    }
+  }
+
+  const removeAttachment = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+      attachments: prev.attachments.filter((_, i) => i !== index),
     }))
   }
 
-  const handleAddCustomTag = () => {
-    if (customTag.trim()) {
-      addTag(customTag.trim().toLowerCase())
-      setCustomTag("")
-    }
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.title.trim()) newErrors.title = "Title is required"
+    else if (formData.title.length < 10) newErrors.title = "Title must be at least 10 characters"
+
+    if (!formData.content.trim()) newErrors.content = "Question content is required"
+    else if (formData.content.length < 20) newErrors.content = "Please provide more details (at least 20 characters)"
+
+    if (!formData.subject) newErrors.subject = "Please select a subject"
+
+    if (formData.tags.length === 0) newErrors.tags = "Please add at least one tag"
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,263 +102,320 @@ export default function AskPage() {
     if (!validateForm()) return
 
     setLoading(true)
-    setError("")
-
     try {
-      if (!user) {
-        throw new Error("User not authenticated")
-      }
-
-      await addDoc(collection(db, "questions"), {
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        subject: formData.subject,
-        tags: formData.tags,
-        urgency: formData.urgency,
-        userId: user.uid,
-        userEmail: user.email,
-        userName: user.displayName || user.email?.split("@")[0] || "Anonymous",
-        createdAt: serverTimestamp(),
-        answered: false,
-        views: 0,
-        upvotes: 0,
-        status: "open",
-      })
-
-      toast.success("Question submitted successfully!")
-      router.push("/student/dashboard")
-    } catch (err: any) {
-      console.error("Error submitting question:", err)
-      setError("Failed to submit question. Please try again.")
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      console.log("Question submitted:", formData)
+      // Redirect to question page or show success message
+    } catch (error) {
+      console.error("Submit error:", error)
     } finally {
       setLoading(false)
     }
   }
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "high":
-        return "bg-red-100 text-red-800"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800"
-      case "low":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Ask a Question</h1>
-            <p className="text-gray-600">Get help from our community of verified lecturers and experts</p>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Ask a Question</h1>
+          <p className="text-gray-600">Get expert answers from certified engineering professionals</p>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Form */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <HelpCircle className="h-5 w-5 text-blue-600" />
-                    <span>Question Details</span>
-                  </CardTitle>
-                  <CardDescription>Provide clear and detailed information to get the best answers</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {error && (
-                    <Alert variant="destructive" className="mb-6">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Form */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <HelpCircle className="h-5 w-5 text-blue-600" />
+                  <span>Your Question</span>
+                </CardTitle>
+                <CardDescription>Provide clear details to help our experts give you the best answer</CardDescription>
+              </CardHeader>
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Question Title *</Label>
-                      <Input
-                        id="title"
-                        name="title"
-                        placeholder="e.g., How does a cantilever beam support load?"
-                        value={formData.title}
-                        onChange={handleInputChange}
-                        disabled={loading}
-                        className="text-lg"
-                        required
-                      />
-                      <p className="text-xs text-gray-500">{formData.title.length}/100 characters</p>
-                    </div>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Title */}
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Question Title *</Label>
+                    <Input
+                      id="title"
+                      placeholder="e.g., How to calculate beam deflection with distributed load?"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange("title", e.target.value)}
+                      className={errors.title ? "border-red-500" : ""}
+                    />
+                    {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                    <p className="text-xs text-gray-500">
+                      Be specific and descriptive. Good titles get better answers.
+                    </p>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="subject">Subject Area *</Label>
-                      <Select value={formData.subject} onValueChange={handleSubjectChange} disabled={loading}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your subject area" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SUBJECTS.map((subject) => (
-                            <SelectItem key={subject.value} value={subject.value}>
-                              {subject.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Detailed Description *</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        placeholder="Explain your question in detail. Include any relevant context, what you've tried, and what specific help you need..."
-                        rows={8}
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        disabled={loading}
-                        required
-                      />
-                      <p className="text-xs text-gray-500">{formData.description.length}/1000 characters</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Tags (Optional)</Label>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {formData.tags.map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="secondary"
-                            className="cursor-pointer hover:bg-red-100"
-                            onClick={() => removeTag(tag)}
-                          >
-                            {tag} ×
-                          </Badge>
+                  {/* Subject */}
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject *</Label>
+                    <Select value={formData.subject} onValueChange={(value) => handleInputChange("subject", value)}>
+                      <SelectTrigger className={errors.subject ? "border-red-500" : ""}>
+                        <SelectValue placeholder="Select engineering subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
                         ))}
-                      </div>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {COMMON_TAGS.filter((tag) => !formData.tags.includes(tag)).map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="outline"
-                            className="cursor-pointer hover:bg-blue-50"
-                            onClick={() => addTag(tag)}
-                          >
-                            + {tag}
-                          </Badge>
-                        ))}
-                      </div>
+                      </SelectContent>
+                    </Select>
+                    {errors.subject && <p className="text-sm text-red-500">{errors.subject}</p>}
+                  </div>
+
+                  {/* Content */}
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Question Details *</Label>
+                    <Textarea
+                      id="content"
+                      placeholder="Describe your question in detail. Include what you've tried, what you're expecting, and any relevant context..."
+                      value={formData.content}
+                      onChange={(e) => handleInputChange("content", e.target.value)}
+                      className={`min-h-[150px] ${errors.content ? "border-red-500" : ""}`}
+                    />
+                    {errors.content && <p className="text-sm text-red-500">{errors.content}</p>}
+                    <p className="text-xs text-gray-500">
+                      Include formulas, calculations, or specific problems you're facing.
+                    </p>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="space-y-2">
+                    <Label htmlFor="tags">Tags * (up to 5)</Label>
+                    <div className="space-y-2">
                       <div className="flex space-x-2">
                         <Input
-                          placeholder="Add custom tag"
-                          value={customTag}
-                          onChange={(e) => setCustomTag(e.target.value)}
-                          onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCustomTag())}
-                          disabled={loading || formData.tags.length >= 5}
+                          placeholder="Add a tag..."
+                          value={currentTag}
+                          onChange={(e) => setCurrentTag(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              addTag(currentTag)
+                            }
+                          }}
+                          className="flex-1"
                         />
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={handleAddCustomTag}
-                          disabled={loading || !customTag.trim() || formData.tags.length >= 5}
+                          onClick={() => addTag(currentTag)}
+                          disabled={!currentTag || formData.tags.length >= 5}
                         >
-                          Add
+                          <Tag className="h-4 w-4" />
                         </Button>
                       </div>
-                      <p className="text-xs text-gray-500">Tags help categorize your question. Maximum 5 tags.</p>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label>Urgency Level</Label>
-                      <Select value={formData.urgency} onValueChange={handleUrgencyChange} disabled={loading}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low - General inquiry</SelectItem>
-                          <SelectItem value="medium">Medium - Need help soon</SelectItem>
-                          <SelectItem value="high">High - Urgent assignment/exam</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Badge className={getUrgencyColor(formData.urgency)}>
-                        {formData.urgency.charAt(0).toUpperCase() + formData.urgency.slice(1)} Priority
-                      </Badge>
-                    </div>
+                      {/* Current Tags */}
+                      {formData.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {formData.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                              <span>{tag}</span>
+                              <button type="button" onClick={() => removeTag(tag)} className="ml-1 hover:text-red-600">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
 
-                    <div className="flex space-x-4 pt-6">
-                      <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={loading}>
-                        {loading ? "Submitting..." : "Submit Question"}
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
-                        Cancel
-                      </Button>
+                      {/* Suggested Tags */}
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2">Suggested tags:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {suggestedTags
+                            .filter((tag) => !formData.tags.includes(tag))
+                            .slice(0, 6)
+                            .map((tag) => (
+                              <Button
+                                key={tag}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addTag(tag)}
+                                disabled={formData.tags.length >= 5}
+                                className="text-xs"
+                              >
+                                {tag}
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
                     </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
+                    {errors.tags && <p className="text-sm text-red-500">{errors.tags}</p>}
+                  </div>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Lightbulb className="h-5 w-5 text-yellow-600" />
-                    <span>Tips for Great Questions</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Be specific and clear in your title</span>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Include relevant context and background</span>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Mention what you've already tried</span>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Use proper grammar and formatting</span>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Add relevant tags to help categorize</span>
+                  {/* Urgency */}
+                  <div className="space-y-2">
+                    <Label htmlFor="urgency">Urgency Level</Label>
+                    <Select value={formData.urgency} onValueChange={(value) => handleInputChange("urgency", value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low - General inquiry</SelectItem>
+                        <SelectItem value="normal">Normal - Regular question</SelectItem>
+                        <SelectItem value="high">High - Assignment due soon</SelectItem>
+                        <SelectItem value="urgent">Urgent - Exam preparation</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* File Attachments */}
+                  <div className="space-y-2">
+                    <Label htmlFor="attachments">Attachments (optional)</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                      <div className="text-center">
+                        <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-600 mb-2">
+                          Upload images, diagrams, or documents (max 3 files, 10MB each)
+                        </p>
+                        <input
+                          type="file"
+                          id="attachments"
+                          multiple
+                          accept="image/*,.pdf,.doc,.docx"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById("attachments")?.click()}
+                          disabled={formData.attachments.length >= 3}
+                        >
+                          Choose Files
+                        </Button>
+                      </div>
+
+                      {/* Uploaded Files */}
+                      {formData.attachments.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {formData.attachments.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                              <span className="text-sm text-gray-700">{file.name}</span>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => removeAttachment(index)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Response Time</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>High Priority:</span>
-                      <span className="font-medium">2-6 hours</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Medium Priority:</span>
-                      <span className="font-medium">6-24 hours</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Low Priority:</span>
-                      <span className="font-medium">1-3 days</span>
-                    </div>
+                  {/* Submit Button */}
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Submitting Question...
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Submit Question
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Tips */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Lightbulb className="h-5 w-5 text-yellow-500" />
+                  <span>Tips for Great Questions</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-gray-700">Be specific and descriptive in your title</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-gray-700">Include what you've already tried</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-gray-700">Add relevant diagrams or images</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-gray-700">Use appropriate tags for better visibility</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-gray-700">Show your work and calculations</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Guidelines */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BookOpen className="h-5 w-5 text-blue-500" />
+                  <span>Community Guidelines</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Please ensure your question is related to engineering topics and follows academic integrity
+                    guidelines.
+                  </AlertDescription>
+                </Alert>
+                <div className="text-sm text-gray-600 space-y-2">
+                  <p>• Be respectful and professional</p>
+                  <p>• Don't ask for complete homework solutions</p>
+                  <p>• Search existing questions before posting</p>
+                  <p>• Provide context and show your effort</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Response Time */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Expected Response Time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Normal questions:</span>
+                    <span className="font-medium">2-6 hours</span>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="flex justify-between">
+                    <span>High priority:</span>
+                    <span className="font-medium">1-3 hours</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Urgent questions:</span>
+                    <span className="font-medium">30-60 minutes</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
-    </AuthGuard>
+    </div>
   )
 }
