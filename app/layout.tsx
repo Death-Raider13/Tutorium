@@ -3,9 +3,10 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { ToastProvider } from "@/components/ui/toast-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import NavBar from "@/components/NavBar"
+import Footer from "@/components/Footer"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -94,7 +95,8 @@ export default function RootLayout({
             <div className="min-h-screen bg-background font-sans">
               <NavBar />
               <main className="flex-1">{children}</main>
-              <ToastProvider />
+              <Footer />
+              <Toaster />
             </div>
           </ThemeProvider>
         </ErrorBoundary>
