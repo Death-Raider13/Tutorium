@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { GraduationCap, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react"
+import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -9,96 +9,87 @@ export default function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-blue-400" />
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">T</span>
+              </div>
               <span className="text-xl font-bold">Tutorium</span>
             </div>
             <p className="text-gray-300 text-sm">
-              Empowering engineering students with expert guidance, interactive learning, and collaborative study
-              groups.
+              Connecting students with certified engineering professionals for personalized learning experiences.
             </p>
             <div className="flex space-x-4">
-              <Link href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
                 <Facebook className="h-5 w-5" />
               </Link>
-              <Link href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
                 <Twitter className="h-5 w-5" />
               </Link>
-              <Link href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
                 <Instagram className="h-5 w-5" />
               </Link>
-              <Link href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <Link href="#" className="text-gray-400 hover:text-white transition-colors">
                 <Linkedin className="h-5 w-5" />
               </Link>
             </div>
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Quick Links</h3>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  Home
+                <Link href="/lessons" className="text-gray-300 hover:text-white transition-colors">
+                  Browse Lessons
                 </Link>
               </li>
               <li>
-                <Link href="/questions" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  Questions
+                <Link href="/questions" className="text-gray-300 hover:text-white transition-colors">
+                  Ask Questions
                 </Link>
               </li>
               <li>
-                <Link href="/lessons" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  Lessons
-                </Link>
-              </li>
-              <li>
-                <Link href="/study-groups" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="/study-groups" className="text-gray-300 hover:text-white transition-colors">
                   Study Groups
                 </Link>
               </li>
               <li>
-                <Link href="/ask" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  Ask Question
+                <Link href="/student/lecturers" className="text-gray-300 hover:text-white transition-colors">
+                  Find Lecturers
                 </Link>
               </li>
             </ul>
           </div>
 
           {/* Support */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Support</h3>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Support</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/help" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="/help" className="text-gray-300 hover:text-white transition-colors">
                   Help Center
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
                   Contact Us
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="/privacy" className="text-gray-300 hover:text-white transition-colors">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="/terms" className="text-gray-300 hover:text-white transition-colors">
                   Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  FAQ
                 </Link>
               </li>
             </ul>
           </div>
 
           {/* Contact Info */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Contact Info</h3>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Mail className="h-4 w-4 text-blue-400" />
@@ -116,20 +107,8 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-gray-400 text-sm">© 2024 Tutorium. All rights reserved.</p>
-          <div className="flex space-x-6 mt-4 sm:mt-0">
-            <Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Privacy
-            </Link>
-            <Link href="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Terms
-            </Link>
-            <Link href="/cookies" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Cookies
-            </Link>
-          </div>
+        <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+          <p className="text-gray-400 text-sm">© {new Date().getFullYear()} Tutorium. All rights reserved.</p>
         </div>
       </div>
     </footer>

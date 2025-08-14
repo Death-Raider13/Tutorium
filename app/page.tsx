@@ -4,220 +4,238 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
-  GraduationCap,
-  Users,
-  MessageSquare,
   BookOpen,
-  Award,
-  TrendingUp,
+  MessageSquare,
+  Users,
+  GraduationCap,
   Star,
-  Play,
+  CheckCircle,
   ArrowRight,
-  Clock,
+  Play,
+  Award,
+  Target,
+  Zap,
 } from "lucide-react"
 
 export default function HomePage() {
-  const featuredLecturers = [
-    {
-      id: 1,
-      name: "Dr. Adebayo Ogundimu",
-      title: "Structural Engineering Expert",
-      university: "University of Lagos",
-      rating: 4.9,
-      students: 1250,
-      image: "/placeholder-user.jpg",
-      specialties: ["Structural Analysis", "Concrete Design", "Steel Structures"],
-    },
-    {
-      id: 2,
-      name: "Prof. Fatima Al-Rashid",
-      title: "Mechanical Engineering Professor",
-      university: "Ahmadu Bello University",
-      rating: 4.8,
-      students: 980,
-      image: "/placeholder-user.jpg",
-      specialties: ["Thermodynamics", "Fluid Mechanics", "Heat Transfer"],
-    },
-    {
-      id: 3,
-      name: "Dr. Chinedu Okwu",
-      title: "Electrical Engineering Specialist",
-      university: "University of Nigeria, Nsukka",
-      rating: 4.9,
-      students: 1100,
-      image: "/placeholder-user.jpg",
-      specialties: ["Power Systems", "Control Systems", "Electronics"],
-    },
-  ]
-
-  const recentQuestions = [
-    {
-      id: 1,
-      title: "How to calculate the deflection of a simply supported beam?",
-      subject: "Structural Engineering",
-      author: "Kemi Adebayo",
-      answers: 5,
-      votes: 12,
-      timeAgo: "2 hours ago",
-      tags: ["beam-analysis", "deflection", "structural"],
-    },
-    {
-      id: 2,
-      title: "What's the difference between AC and DC motor control?",
-      subject: "Electrical Engineering",
-      author: "Ibrahim Musa",
-      answers: 3,
-      votes: 8,
-      timeAgo: "4 hours ago",
-      tags: ["motors", "control-systems", "electrical"],
-    },
-    {
-      id: 3,
-      title: "How to design a heat exchanger for optimal efficiency?",
-      subject: "Mechanical Engineering",
-      author: "Grace Okafor",
-      answers: 7,
-      votes: 15,
-      timeAgo: "6 hours ago",
-      tags: ["heat-transfer", "design", "mechanical"],
-    },
-  ]
-
-  const popularLessons = [
-    {
-      id: 1,
-      title: "Introduction to Structural Analysis",
-      instructor: "Dr. Adebayo Ogundimu",
-      duration: "45 min",
-      students: 2340,
-      rating: 4.8,
-      thumbnail: "/placeholder.jpg",
-      level: "Beginner",
-      subject: "Civil Engineering",
-    },
-    {
-      id: 2,
-      title: "Thermodynamics Fundamentals",
-      instructor: "Prof. Fatima Al-Rashid",
-      duration: "38 min",
-      students: 1890,
-      rating: 4.9,
-      thumbnail: "/placeholder.jpg",
-      level: "Intermediate",
-      subject: "Mechanical Engineering",
-    },
-    {
-      id: 3,
-      title: "Circuit Analysis Techniques",
-      instructor: "Dr. Chinedu Okwu",
-      duration: "52 min",
-      students: 1650,
-      rating: 4.7,
-      thumbnail: "/placeholder.jpg",
-      level: "Beginner",
-      subject: "Electrical Engineering",
-    },
-  ]
-
-  const stats = [
-    { label: "Active Students", value: "25,000+", icon: Users },
-    { label: "Expert Lecturers", value: "500+", icon: GraduationCap },
-    { label: "Questions Answered", value: "100,000+", icon: MessageSquare },
-    { label: "Video Lessons", value: "2,500+", icon: BookOpen },
-  ]
-
-  const features = [
-    {
-      icon: MessageSquare,
-      title: "Expert Q&A",
-      description: "Get your engineering questions answered by certified professionals from top Nigerian universities.",
-    },
-    {
-      icon: BookOpen,
-      title: "Video Lessons",
-      description: "Access comprehensive video tutorials covering all major engineering disciplines and topics.",
-    },
-    {
-      icon: Users,
-      title: "Study Groups",
-      description: "Join collaborative study groups with peers and participate in guided learning sessions.",
-    },
-    {
-      icon: Award,
-      title: "Achievements",
-      description: "Earn badges and certificates as you progress through your engineering education journey.",
-    },
-  ]
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-              Master Engineering with
-              <span className="text-blue-600 block">Expert Guidance</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Connect with certified lecturers from top Nigerian universities. Get your questions answered, learn
-              through interactive lessons, and excel in your engineering studies.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700" asChild>
-                <Link href="/signup">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/questions">
-                  Browse Questions
-                  <MessageSquare className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
+      <section className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                  🚀 Join 10,000+ Engineering Students
+                </Badge>
+                <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+                  Learn Engineering with <span className="text-yellow-300">Certified Professionals</span>
+                </h1>
+                <p className="text-xl text-blue-100 max-w-2xl">
+                  Get personalized answers to your engineering questions, access premium video lessons, and connect with
+                  verified lecturers from top Nigerian universities.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-3">
+                  <GraduationCap className="mr-2 h-5 w-5" />
+                  Start Learning Free
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white/10 text-lg px-8 py-3 bg-transparent"
+                >
+                  <Play className="mr-2 h-5 w-5" />
+                  Watch Demo
+                </Button>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-8 pt-8 border-t border-white/20">
+                <div className="text-center">
+                  <div className="text-3xl font-bold">500+</div>
+                  <div className="text-blue-200 text-sm">Expert Lecturers</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold">10K+</div>
+                  <div className="text-blue-200 text-sm">Questions Answered</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold">95%</div>
+                  <div className="text-blue-200 text-sm">Success Rate</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="relative z-10 bg-white rounded-2xl shadow-2xl p-8">
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src="/placeholder-user.jpg" />
+                      <AvatarFallback className="bg-blue-600 text-white">DR</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold text-gray-900">Dr. Adebayo Ogundimu</div>
+                      <div className="text-sm text-gray-500">Structural Engineering • UI</div>
+                      <div className="flex items-center space-x-1">
+                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                        <span className="text-sm font-medium">4.9</span>
+                        <span className="text-sm text-gray-500">(234 reviews)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600 mb-2">Latest Question Answered:</div>
+                    <div className="font-medium text-gray-900">
+                      "How do I calculate the deflection in a simply supported beam with distributed load?"
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <Badge variant="secondary" className="text-xs">
+                        Structural Analysis
+                      </Badge>
+                      <div className="text-xs text-gray-500">2 hours ago</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating elements */}
+              <div className="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 rounded-full p-3 shadow-lg">
+                <Award className="h-6 w-6" />
+              </div>
+              <div className="absolute -bottom-4 -left-4 bg-green-500 text-white rounded-full p-3 shadow-lg">
+                <CheckCircle className="h-6 w-6" />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
+      {/* Features Section */}
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mb-4">
-                  <stat.icon className="h-6 w-6 text-blue-600" />
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Everything You Need to Excel in Engineering
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              From interactive Q&A sessions to comprehensive video lessons, we provide all the tools you need for
+              academic success.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 p-3 bg-blue-100 rounded-full w-fit">
+                  <MessageSquare className="h-8 w-8 text-blue-600" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900 mb-2">{stat.value}</div>
-                <div className="text-gray-600">{stat.label}</div>
-              </div>
-            ))}
+                <CardTitle className="text-xl">Expert Q&A</CardTitle>
+                <CardDescription>
+                  Get detailed answers to your engineering questions from certified professionals
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>24/7 Question Submission</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Detailed Step-by-Step Solutions</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Follow-up Questions Allowed</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 p-3 bg-green-100 rounded-full w-fit">
+                  <BookOpen className="h-8 w-8 text-green-600" />
+                </div>
+                <CardTitle className="text-xl">Video Lessons</CardTitle>
+                <CardDescription>
+                  Access premium video content covering all major engineering disciplines
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>HD Quality Videos</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Downloadable Resources</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Progress Tracking</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 p-3 bg-purple-100 rounded-full w-fit">
+                  <Users className="h-8 w-8 text-purple-600" />
+                </div>
+                <CardTitle className="text-xl">Study Groups</CardTitle>
+                <CardDescription>Join collaborative study sessions with peers and expert guidance</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Live Group Sessions</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Peer Collaboration</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>Expert Moderation</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Popular Subjects */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Everything You Need to Excel</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Our platform provides comprehensive tools and resources to support your engineering education journey.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Popular Engineering Subjects</h2>
+            <p className="text-xl text-gray-600">Explore our most sought-after engineering disciplines</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="text-center border-0 shadow-lg">
-                <CardHeader>
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-4">
-                    <feature.icon className="h-6 w-6 text-blue-600" />
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            {[
+              { name: "Civil Engineering", count: "1,234 lessons", color: "bg-blue-500" },
+              { name: "Mechanical", count: "987 lessons", color: "bg-green-500" },
+              { name: "Electrical", count: "856 lessons", color: "bg-yellow-500" },
+              { name: "Chemical", count: "654 lessons", color: "bg-purple-500" },
+              { name: "Computer", count: "1,123 lessons", color: "bg-red-500" },
+              { name: "Petroleum", count: "432 lessons", color: "bg-indigo-500" },
+            ].map((subject) => (
+              <Card key={subject.name} className="text-center hover:shadow-lg transition-shadow cursor-pointer">
+                <CardContent className="p-6">
+                  <div
+                    className={`w-12 h-12 ${subject.color} rounded-lg mx-auto mb-4 flex items-center justify-center`}
+                  >
+                    <GraduationCap className="h-6 w-6 text-white" />
                   </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-600">{feature.description}</CardDescription>
+                  <h3 className="font-semibold text-gray-900 mb-1">{subject.name}</h3>
+                  <p className="text-sm text-gray-500">{subject.count}</p>
                 </CardContent>
               </Card>
             ))}
@@ -228,217 +246,137 @@ export default function HomePage() {
       {/* Featured Lecturers */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Lecturers</h2>
-              <p className="text-gray-600">Learn from certified experts at top Nigerian universities</p>
-            </div>
-            <Button variant="outline" asChild>
-              <Link href="/student/lecturers">
-                View All
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Learn from the Best</h2>
+            <p className="text-xl text-gray-600">Our certified lecturers from top Nigerian universities</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredLecturers.map((lecturer) => (
-              <Card key={lecturer.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="text-center">
-                  <Avatar className="w-20 h-20 mx-auto mb-4">
-                    <AvatarImage src={lecturer.image || "/placeholder.svg"} alt={lecturer.name} />
-                    <AvatarFallback>
-                      {lecturer.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <CardTitle className="text-xl">{lecturer.name}</CardTitle>
-                  <CardDescription>{lecturer.title}</CardDescription>
-                  <p className="text-sm text-blue-600 font-medium">{lecturer.university}</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <div className="flex items-center">
-                      <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span className="font-medium">{lecturer.rating}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Users className="h-4 w-4 mr-1" />
-                      <span>{lecturer.students.toLocaleString()} students</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {lecturer.specialties.map((specialty, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {specialty}
-                      </Badge>
-                    ))}
-                  </div>
-                  <Button className="w-full bg-transparent" variant="outline">
-                    View Profile
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Recent Questions */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Recent Questions</h2>
-              <p className="text-gray-600">See what students are asking and learning about</p>
-            </div>
-            <Button variant="outline" asChild>
-              <Link href="/questions">
-                View All Questions
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-          <div className="space-y-6">
-            {recentQuestions.map((question) => (
-              <Card key={question.id} className="hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Dr. Adebayo Ogundimu",
+                title: "Professor of Structural Engineering",
+                university: "University of Ibadan",
+                rating: 4.9,
+                students: 1234,
+                image: "/placeholder-user.jpg",
+                specialties: ["Structural Analysis", "Concrete Design", "Steel Structures"],
+              },
+              {
+                name: "Prof. Fatima Al-Rashid",
+                title: "Chemical Engineering Expert",
+                university: "Ahmadu Bello University",
+                rating: 4.8,
+                students: 987,
+                image: "/placeholder-user.jpg",
+                specialties: ["Process Design", "Thermodynamics", "Mass Transfer"],
+              },
+              {
+                name: "Dr. Chukwuma Okafor",
+                title: "Electrical Engineering Specialist",
+                university: "University of Nigeria, Nsukka",
+                rating: 4.9,
+                students: 1456,
+                image: "/placeholder-user.jpg",
+                specialties: ["Power Systems", "Control Systems", "Electronics"],
+              },
+            ].map((lecturer) => (
+              <Card key={lecturer.name} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={lecturer.image || "/placeholder.svg"} />
+                      <AvatarFallback className="bg-blue-600 text-white text-lg">
+                        {lecturer.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600 cursor-pointer">
-                        {question.title}
-                      </h3>
-                      <div className="flex items-center text-sm text-gray-600 mb-3">
-                        <span className="font-medium">{question.author}</span>
-                        <span className="mx-2">•</span>
-                        <Badge variant="outline" className="text-xs">
-                          {question.subject}
-                        </Badge>
-                        <span className="mx-2">•</span>
-                        <Clock className="h-4 w-4 mr-1" />
-                        <span>{question.timeAgo}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {question.tags.map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
+                      <h3 className="font-semibold text-gray-900">{lecturer.name}</h3>
+                      <p className="text-sm text-gray-600">{lecturer.title}</p>
+                      <p className="text-sm text-blue-600">{lecturer.university}</p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <TrendingUp className="h-4 w-4 mr-1" />
-                        <span>{question.votes} votes</span>
-                      </div>
-                      <div className="flex items-center">
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        <span>{question.answers} answers</span>
-                      </div>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-1">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <span className="font-medium">{lecturer.rating}</span>
+                      <span className="text-sm text-gray-500">({lecturer.students} students)</span>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      View Question
-                    </Button>
+                    <Badge variant="secondary">Verified</Badge>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Specialties:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {lecturer.specialties.map((specialty) => (
+                        <Badge key={specialty} variant="outline" className="text-xs">
+                          {specialty}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Popular Lessons */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Popular Lessons</h2>
-              <p className="text-gray-600">Top-rated video lessons from expert instructors</p>
-            </div>
-            <Button variant="outline" asChild>
-              <Link href="/lessons">
-                View All Lessons
+          <div className="text-center mt-12">
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/student/lecturers">
+                View All Lecturers
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {popularLessons.map((lesson) => (
-              <Card key={lesson.id} className="hover:shadow-lg transition-shadow overflow-hidden">
-                <div className="relative">
-                  <img
-                    src={lesson.thumbnail || "/placeholder.svg"}
-                    alt={lesson.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <Button size="lg" className="bg-white text-black hover:bg-gray-100">
-                      <Play className="h-5 w-5 mr-2" />
-                      Play Lesson
-                    </Button>
-                  </div>
-                  <Badge className="absolute top-3 left-3 bg-blue-600">{lesson.level}</Badge>
-                </div>
-                <CardContent className="p-6">
-                  <div className="mb-3">
-                    <Badge variant="outline" className="text-xs mb-2">
-                      {lesson.subject}
-                    </Badge>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{lesson.title}</h3>
-                    <p className="text-sm text-gray-600">by {lesson.instructor}</p>
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span>{lesson.duration}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
-                      <span>{lesson.students.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span>{lesson.rating}</span>
-                    </div>
-                  </div>
-                  <Button className="w-full bg-transparent" variant="outline">
-                    Start Learning
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-blue-600">
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">Ready to Excel in Engineering?</h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join thousands of students who are already learning from Nigeria's top engineering experts.
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Engineering Journey?</h2>
+          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of students who are already excelling with personalized guidance from certified engineering
+            professionals.
           </p>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100" asChild>
+            <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-3" asChild>
               <Link href="/signup">
-                Start Learning Today
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <Zap className="mr-2 h-5 w-5" />
+                Get Started Free
               </Link>
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-blue-600 bg-transparent"
+              className="border-white text-white hover:bg-white/10 text-lg px-8 py-3 bg-transparent"
               asChild
             >
-              <Link href="/ask">
+              <Link href="/questions">
+                <Target className="mr-2 h-5 w-5" />
                 Ask Your First Question
-                <MessageSquare className="ml-2 h-5 w-5" />
               </Link>
             </Button>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="text-2xl font-bold mb-2">Free to Start</div>
+              <div className="text-blue-200">No credit card required</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold mb-2">24/7 Support</div>
+              <div className="text-blue-200">Get help anytime</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold mb-2">Verified Experts</div>
+              <div className="text-blue-200">Certified professionals only</div>
+            </div>
           </div>
         </div>
       </section>

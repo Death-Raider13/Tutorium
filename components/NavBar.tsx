@@ -9,28 +9,59 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import {
-  Menu,
-  GraduationCap,
-  User,
-  Settings,
-  LogOut,
-  Bell,
-  MessageSquare,
-  Users,
-  Award,
-  BarChart3,
-  Upload,
-  Shield,
-} from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Menu, Bell, Search, BookOpen, MessageSquare, Users, GraduationCap, Settings, LogOut, User } from "lucide-react"
 
-// Define user roles as constants to avoid dependency issues
+// Mock user data for development
+const mockUser = {
+  uid: "mock-user-id",
+  email: "john.doe@example.com",
+  displayName: "John Doe",
+  profileImage: null,
+  role: "student" as const,
+  emailVerified: true,
+  points: 1250,
+  level: 3,
+}
+
+// Mock auth hook for development
+const useAuth = () => {
+  return {
+    user: mockUser,
+    isAuthenticated: true,
+    isLoading: false,
+    isAdmin: false,
+    isLecturer: false,
+    isStudent: true,
+    signOut: async () => {
+      console.log("Sign out clicked")
+    },
+  }
+}
+
+const getInitials = (name: string | null | undefined): string => {
+  if (!name || typeof name !== "string") return "U"
+
+  try {
+    const parts = name.trim().split(" ")
+    if (parts.length === 0) return "U"
+
+    const initials = parts
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("")
+
+    return initials || "U"
+  } catch (error) {
+    console.error("Error generating initials:", error)
+    return "U"
+  }
+}
+
 const USER_ROLES = {
   ADMIN: "admin",
   LECTURER: "lecturer",
@@ -38,154 +69,114 @@ const USER_ROLES = {
   PENDING: "pending",
 } as const
 
-// Mock auth hook for now
-const useAuth = () => {
-  return {
-    user: null,
-    isAuthenticated: false,
-    signOut: async () => {},
-  }
-}
-
 export default function NavBar() {
-  const { user, isAuthenticated, signOut } = useAuth()
-  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const pathname = usePathname()
+  const { user, isAuthenticated, isLoading, isAdmin, isLecturer, isStudent, signOut } = useAuth()
 
-  // Safe function to get initials with proper null checks
-  const getInitials = (name?: string | null) => {
-    if (!name || typeof name !== "string") {
-      return "U"
-    }
+  const navigation = [
+    { name: "Home", href: "/", icon: null },
+    { name: "Lessons", href: "/lessons", icon: BookOpen },
+    { name: "Questions", href: "/questions", icon: MessageSquare },
+    { name: "Study Groups", href: "/study-groups", icon: Users },
+  ]
 
-    try {
-      return (
-        name
-          .trim()
-          .split(" ")
-          .filter((word) => word.length > 0)
-          .map((word) => word.charAt(0))
-          .join("")
-          .toUpperCase()
-          .slice(0, 2) || "U"
-      )
-    } catch (error) {
-      console.error("Error generating initials:", error)
-      return "U"
-    }
-  }
+  const userNavigation = isAuthenticated
+    ? [
+        ...(isStudent
+          ? [
+              { name: "Dashboard", href: "/student/dashboard", icon: User },
+              { name: "Find Lecturers", href: "/student/lecturers", icon: GraduationCap },
+            ]
+          : []),
+        ...(isLecturer
+          ? [
+              { name: "Dashboard", href: "/lecturer/dashboard", icon: User },
+              { name: "Upload Content", href: "/lecturer/upload", icon: BookOpen },
+              { name: "My Students", href: "/lecturer/students", icon: Users },
+              { name: "Analytics", href: "/lecturer/analytics", icon: Settings },
+            ]
+          : []),
+        ...(isAdmin ? [{ name: "Admin Panel", href: "/admin", icon: Settings }] : []),
+        { name: "Profile", href: "/profile", icon: User },
+        { name: "Achievements", href: "/achievements", icon: GraduationCap },
+      ]
+    : []
 
   const handleSignOut = async () => {
     try {
       await signOut()
     } catch (error) {
-      console.error("Error signing out:", error)
+      console.error("Sign out error:", error)
     }
   }
 
-  // Safe role checking functions
-  const isAdmin = user?.role === USER_ROLES.ADMIN
-  const isLecturer = user?.role === USER_ROLES.LECTURER
-  const isStudent = user?.role === USER_ROLES.STUDENT
-
-  const navigationItems = [
-    { href: "/", label: "Home", public: true },
-    { href: "/questions", label: "Questions", public: true },
-    { href: "/lessons", label: "Lessons", public: true },
-    { href: "/ask", label: "Ask Question", requireAuth: true },
-    { href: "/study-groups", label: "Study Groups", requireAuth: true },
-  ]
-
-  const studentItems = [
-    { href: "/student/dashboard", label: "Dashboard", icon: BarChart3 },
-    { href: "/student/lecturers", label: "Find Lecturers", icon: Users },
-    { href: "/achievements", label: "Achievements", icon: Award },
-    { href: "/profile", label: "Profile", icon: User },
-  ]
-
-  const lecturerItems = [
-    { href: "/lecturer/dashboard", label: "Dashboard", icon: BarChart3 },
-    { href: "/lecturer/upload", label: "Upload Content", icon: Upload },
-    { href: "/lecturer/questions", label: "Answer Questions", icon: MessageSquare },
-    { href: "/lecturer/students", label: "My Students", icon: Users },
-    { href: "/lecturer/analytics", label: "Analytics", icon: BarChart3 },
-    { href: "/profile", label: "Profile", icon: User },
-  ]
-
-  const adminItems = [
-    { href: "/admin", label: "Admin Dashboard", icon: Shield },
-    { href: "/profile", label: "Profile", icon: User },
-  ]
-
-  const getRoleItems = () => {
-    if (isAdmin) return adminItems
-    if (isLecturer) return lecturerItems
-    if (isStudent) return studentItems
-    return []
+  if (isLoading) {
+    return (
+      <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="ml-2 w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="w-16 h-8 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    )
   }
-
-  const isActivePath = (href: string) => {
-    if (href === "/") return pathname === "/"
-    return pathname?.startsWith(href) || false
-  }
-
-  const getRoleBadgeVariant = (role?: string) => {
-    switch (role) {
-      case USER_ROLES.ADMIN:
-        return "destructive"
-      case USER_ROLES.LECTURER:
-        return "default"
-      case USER_ROLES.STUDENT:
-        return "secondary"
-      default:
-        return "outline"
-    }
-  }
-
-  // Safe display name with fallbacks
-  const displayName = user?.displayName || user?.email?.split("@")[0] || "User"
-  const userEmail = user?.email || ""
-  const userRole = user?.role || USER_ROLES.PENDING
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <GraduationCap className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">Tutorium</span>
-          </Link>
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">T</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">Tutorium</span>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navigationItems.map((item) => {
-              if (item.requireAuth && !isAuthenticated) return null
-              if (!item.public && !item.requireAuth && !isAuthenticated) return null
-
+            {navigation.map((item) => {
+              const Icon = item.icon
               return (
                 <Link
-                  key={item.href}
+                  key={item.name}
                   href={item.href}
-                  className={`text-sm font-medium transition-colors ${
-                    isActivePath(item.href)
-                      ? "text-blue-600 border-b-2 border-blue-600 pb-1"
-                      : "text-gray-700 hover:text-blue-600"
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === item.href
+                      ? "text-blue-600 bg-blue-50"
+                      : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
                   }`}
                 >
-                  {item.label}
+                  {Icon && <Icon className="h-4 w-4" />}
+                  <span>{item.name}</span>
                 </Link>
               )
             })}
           </div>
 
-          {/* Right Side */}
+          {/* Right side */}
           <div className="flex items-center space-x-4">
+            {/* Search */}
+            <Button variant="ghost" size="sm" className="hidden md:flex">
+              <Search className="h-4 w-4" />
+            </Button>
+
             {/* Notifications */}
             {isAuthenticated && (
               <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
+                <Bell className="h-4 w-4" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
                   3
                 </Badge>
               </Button>
@@ -195,67 +186,63 @@ export default function NavBar() {
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.profileImage || "/placeholder-user.jpg"} alt={displayName} />
-                      <AvatarFallback className="bg-blue-100 text-blue-600">{getInitials(displayName)}</AvatarFallback>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.profileImage || undefined} alt={user.displayName || "User"} />
+                      <AvatarFallback className="bg-blue-600 text-white">
+                        {getInitials(user.displayName)}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{displayName}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge variant={getRoleBadgeVariant(userRole)} className="text-xs">
-                          {userRole}
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{user.displayName || "User"}</p>
+                      <p className="w-[200px] truncate text-sm text-muted-foreground">{user.email}</p>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {(user.role || "pending").charAt(0).toUpperCase() + (user.role || "pending").slice(1)}
                         </Badge>
-                        {user.emailVerified && (
+                        {user.points && (
                           <Badge variant="outline" className="text-xs">
-                            Verified
+                            {user.points} pts
                           </Badge>
                         )}
                       </div>
                     </div>
-                  </DropdownMenuLabel>
+                  </div>
                   <DropdownMenuSeparator />
-
-                  {/* Role-specific menu items */}
-                  {getRoleItems().map((item) => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href} className="flex items-center">
-                        <item.icon className="mr-2 h-4 w-4" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-
+                  {userNavigation.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <DropdownMenuItem key={item.name} asChild>
+                        <Link href={item.href} className="flex items-center space-x-2">
+                          {Icon && <Icon className="h-4 w-4" />}
+                          <span>{item.name}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )
+                  })}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign out</span>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="hidden md:flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
                 <Button variant="ghost" asChild>
-                  <Link href="/login">Sign In</Link>
+                  <Link href="/login">Sign in</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/signup">Sign Up</Link>
+                  <Link href="/signup">Sign up</Link>
                 </Button>
               </div>
             )}
 
-            {/* Mobile Menu */}
+            {/* Mobile menu button */}
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="sm" className="md:hidden">
@@ -264,96 +251,65 @@ export default function NavBar() {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col space-y-4 mt-4">
-                  {/* User Info */}
-                  {isAuthenticated && user && (
-                    <div className="flex items-center space-x-3 pb-4 border-b">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={user.profileImage || "/placeholder-user.jpg"} alt={displayName} />
-                        <AvatarFallback className="bg-blue-100 text-blue-600">
-                          {getInitials(displayName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{displayName}</p>
-                        <p className="text-sm text-gray-500">{userEmail}</p>
-                        <Badge variant={getRoleBadgeVariant(userRole)} className="text-xs mt-1">
-                          {userRole}
-                        </Badge>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Navigation Items */}
-                  {navigationItems.map((item) => {
-                    if (item.requireAuth && !isAuthenticated) return null
-                    if (!item.public && !item.requireAuth && !isAuthenticated) return null
-
+                  {navigation.map((item) => {
+                    const Icon = item.icon
                     return (
                       <Link
-                        key={item.href}
+                        key={item.name}
                         href={item.href}
                         onClick={() => setIsOpen(false)}
-                        className={`text-sm font-medium py-2 px-3 rounded-md transition-colors ${
-                          isActivePath(item.href) ? "bg-blue-100 text-blue-600" : "text-gray-700 hover:bg-gray-100"
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          pathname === item.href
+                            ? "text-blue-600 bg-blue-50"
+                            : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
                         }`}
                       >
-                        {item.label}
+                        {Icon && <Icon className="h-4 w-4" />}
+                        <span>{item.name}</span>
                       </Link>
                     )
                   })}
 
-                  {/* Role-specific items */}
-                  {isAuthenticated && (
+                  {isAuthenticated && userNavigation.length > 0 && (
                     <>
                       <div className="border-t pt-4">
-                        <p className="text-sm font-medium text-gray-500 mb-2">Dashboard</p>
-                        {getRoleItems().map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center space-x-2 text-sm py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100"
-                          >
-                            <item.icon className="h-4 w-4" />
-                            <span>{item.label}</span>
-                          </Link>
-                        ))}
-                      </div>
-
-                      <div className="border-t pt-4">
-                        <Link
-                          href="/settings"
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center space-x-2 text-sm py-2 px-3 rounded-md text-gray-700 hover:bg-gray-100"
+                        <p className="text-sm font-medium text-gray-500 mb-2">Account</p>
+                        {userNavigation.map((item) => {
+                          const Icon = item.icon
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={() => setIsOpen(false)}
+                              className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                            >
+                              {Icon && <Icon className="h-4 w-4" />}
+                              <span>{item.name}</span>
+                            </Link>
+                          )
+                        })}
+                        <Button
+                          variant="ghost"
+                          onClick={handleSignOut}
+                          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 mt-2"
                         >
-                          <Settings className="h-4 w-4" />
-                          <span>Settings</span>
-                        </Link>
-                        <button
-                          onClick={() => {
-                            handleSignOut()
-                            setIsOpen(false)
-                          }}
-                          className="flex items-center space-x-2 text-sm py-2 px-3 rounded-md text-red-600 hover:bg-red-50 w-full text-left"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          <span>Sign out</span>
-                        </button>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign out
+                        </Button>
                       </div>
                     </>
                   )}
 
-                  {/* Auth buttons for non-authenticated users */}
                   {!isAuthenticated && (
                     <div className="border-t pt-4 space-y-2">
-                      <Button variant="ghost" asChild className="w-full justify-start">
+                      <Button variant="outline" className="w-full bg-transparent" asChild>
                         <Link href="/login" onClick={() => setIsOpen(false)}>
-                          Sign In
+                          Sign in
                         </Link>
                       </Button>
-                      <Button asChild className="w-full">
+                      <Button className="w-full" asChild>
                         <Link href="/signup" onClick={() => setIsOpen(false)}>
-                          Sign Up
+                          Sign up
                         </Link>
                       </Button>
                     </div>
