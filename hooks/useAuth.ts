@@ -1,176 +1,197 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { onAuthStateChanged, type User as FirebaseUser, signOut as firebaseSignOut } from "firebase/auth"
-import { doc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore"
-import { auth, db } from "@/lib/firebase"
-import { isAdminAccount, getAdminAccountInfo } from "@/lib/adminConfig"
-import { useRouter } from "next/navigation"
-import toast from "react-hot-toast"
+import type React from "react"
 
-interface UserData {
+import { useState, useEffect, createContext, useContext } from "react"
+import {
+  type User as FirebaseUser,
+  onAuthStateChanged,
+  signOut as firebaseSignOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  updateProfile,
+} from "firebase/auth"
+import { doc, getDoc, setDoc } from "firebase/firestore"
+import { auth, db } from "@/lib/firebase"
+
+export interface User {
   uid: string
-  email: string | null
-  displayName: string | null
-  emailVerified: boolean
+  email: string
+  displayName?: string | null
+  profileImage?: string | null
   role?: string
-  requestedRole?: "student" | "lecturer"
+  emailVerified: boolean
   createdAt?: Date
   lastLoginAt?: Date
-  isHardcodedAdmin?: boolean
+  points?: number
+  level?: number
 }
 
-interface AuthState {
-  user: FirebaseUser | null
-  userData: UserData | null
+interface AuthContextType {
+  user: User | null
   isAuthenticated: boolean
+  isLoading: boolean
   isAdmin: boolean
-  loading: boolean
-  error: string | null
+  isLecturer: boolean
+  isStudent: boolean
+  signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string, displayName: string) => Promise<void>
+  signOut: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
-export function useAuth(): AuthState {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    userData: null,
-    isAuthenticated: false,
-    isAdmin: false,
-    loading: true,
-    error: null,
-  })
-  const router = useRouter()
+const AuthContext = createContext<AuthContextType | null>(null)
 
-  const signOut = useCallback(async () => {
-    try {
-      await firebaseSignOut(auth)
-      setAuthState((prev) => ({ ...prev, user: null, userData: null }))
-      router.push("/login")
-      toast.success("Logged out successfully")
-    } catch (error) {
-      console.error("Sign out error:", error)
-      toast.error("Failed to log out")
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext)
+  if (!context) {
+    // Return a default context when not wrapped in provider
+    return {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isAdmin: false,
+      isLecturer: false,
+      isStudent: false,
+      signIn: async () => {
+        throw new Error("Auth provider not found")
+      },
+      signUp: async () => {
+        throw new Error("Auth provider not found")
+      },
+      signOut: async () => {
+        throw new Error("Auth provider not found")
+      },
+      refreshUser: async () => {
+        throw new Error("Auth provider not found")
+      },
     }
-  }, [router])
+  }
+  return context
+}
 
-  const createOrUpdateUserDocument = useCallback(async (firebaseUser: FirebaseUser, isAdmin = false) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const fetchUserData = async (firebaseUser: FirebaseUser): Promise<User> => {
     try {
-      const userDocRef = doc(db, "users", firebaseUser.uid)
-      const adminInfo = isAdmin ? getAdminAccountInfo(firebaseUser.email || "") : null
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
+      const userData = userDoc.data()
 
-      const userData = {
+      return {
         uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: adminInfo?.displayName || firebaseUser.displayName || firebaseUser.email?.split("@")[0],
-        role: isAdmin ? "admin" : "pending",
-        emailVerified: firebaseUser.emailVerified || isAdmin,
-        lastLoginAt: new Date(),
-        updatedAt: new Date(),
+        email: firebaseUser.email || "",
+        displayName: firebaseUser.displayName,
+        profileImage: firebaseUser.photoURL,
+        emailVerified: firebaseUser.emailVerified,
+        role: userData?.role || "pending",
+        createdAt: userData?.createdAt?.toDate(),
+        lastLoginAt: userData?.lastLoginAt?.toDate(),
+        points: userData?.points || 0,
+        level: userData?.level || 1,
       }
-
-      await setDoc(userDocRef, userData, { merge: true })
-      return userData
     } catch (error) {
-      console.error("Error creating/updating user document:", error)
-      throw error
+      console.error("Error fetching user data:", error)
+      // Return basic user data if Firestore fetch fails
+      return {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || "",
+        displayName: firebaseUser.displayName,
+        profileImage: firebaseUser.photoURL,
+        emailVerified: firebaseUser.emailVerified,
+        role: "pending",
+        points: 0,
+        level: 1,
+      }
     }
-  }, [])
+  }
+
+  const refreshUser = async () => {
+    if (auth.currentUser) {
+      const userData = await fetchUserData(auth.currentUser)
+      setUser(userData)
+    }
+  }
 
   useEffect(() => {
-    let userDocUnsubscribe: Unsubscribe | null = null
-
-    const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setIsLoading(true)
       try {
-        // Clean up previous user document listener
-        if (userDocUnsubscribe) {
-          userDocUnsubscribe()
-          userDocUnsubscribe = null
-        }
-
-        if (!firebaseUser) {
-          setAuthState({
-            user: null,
-            userData: null,
-            isAuthenticated: false,
-            isAdmin: false,
-            loading: false,
-            error: null,
-          })
-          return
-        }
-
-        // Check if this is a hardcoded admin account
-        const isAdmin = isAdminAccount(firebaseUser.email || "")
-
-        if (isAdmin) {
-          // For admin accounts, create/update user document and set state directly
-          const userData = await createOrUpdateUserDocument(firebaseUser, true)
-          const user: FirebaseUser = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            emailVerified: firebaseUser.emailVerified,
-            phoneNumber: firebaseUser.phoneNumber,
-            providerData: firebaseUser.providerData,
-            stsTokenManager: firebaseUser.stsTokenManager,
-            toJSON: firebaseUser.toJSON,
-          }
-          setAuthState({ user, userData, isAuthenticated: true, isAdmin: true, loading: false, error: null })
+        if (firebaseUser) {
+          const userData = await fetchUserData(firebaseUser)
+          setUser(userData)
         } else {
-          // For regular users, listen to user document changes in real-time
-          const userDocRef = doc(db, "users", firebaseUser.uid)
-          userDocUnsubscribe = onSnapshot(
-            userDocRef,
-            async (docSnapshot) => {
-              let userData = docSnapshot.exists() ? docSnapshot.data() : null
-
-              // If user document doesn't exist, create it
-              if (!userData) {
-                userData = await createOrUpdateUserDocument(firebaseUser, false)
-              }
-
-              const user: FirebaseUser = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName || userData?.displayName,
-                emailVerified: firebaseUser.emailVerified,
-                phoneNumber: firebaseUser.phoneNumber,
-                providerData: firebaseUser.providerData,
-                stsTokenManager: firebaseUser.stsTokenManager,
-                toJSON: firebaseUser.toJSON,
-              }
-
-              setAuthState({ user, userData, isAuthenticated: true, isAdmin: false, loading: false, error: null })
-            },
-            (error) => {
-              console.error("User document listener error:", error)
-              setAuthState((prev) => ({
-                ...prev,
-                loading: false,
-                error: "Failed to load user data",
-              }))
-            },
-          )
+          setUser(null)
         }
       } catch (error) {
         console.error("Auth state change error:", error)
-        setAuthState({
-          user: null,
-          userData: null,
-          isAuthenticated: false,
-          isAdmin: false,
-          loading: false,
-          error: "Authentication error occurred",
-        })
+        setUser(null)
+      } finally {
+        setIsLoading(false)
       }
     })
 
-    return () => {
-      authUnsubscribe()
-      if (userDocUnsubscribe) {
-        userDocUnsubscribe()
-      }
-    }
-  }, [createOrUpdateUserDocument])
+    return unsubscribe
+  }, [])
 
-  return authState
+  const signIn = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (error) {
+      console.error("Sign in error:", error)
+      throw error
+    }
+  }
+
+  const signUp = async (email: string, password: string, displayName: string) => {
+    try {
+      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password)
+
+      // Update profile
+      await updateProfile(firebaseUser, { displayName })
+
+      // Send verification email
+      await sendEmailVerification(firebaseUser)
+
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", firebaseUser.uid), {
+        email,
+        displayName,
+        role: "pending",
+        createdAt: new Date(),
+        lastLoginAt: new Date(),
+        points: 0,
+        level: 1,
+      })
+    } catch (error) {
+      console.error("Sign up error:", error)
+      throw error
+    }
+  }
+
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth)
+    } catch (error) {
+      console.error("Sign out error:", error)
+      throw error
+    }
+  }
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    isAdmin: user?.role === "admin",
+    isLecturer: user?.role === "lecturer",
+    isStudent: user?.role === "student",
+    signIn,
+    signUp,
+    signOut,
+    refreshUser,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

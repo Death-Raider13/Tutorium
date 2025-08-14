@@ -1,100 +1,121 @@
 import Link from "next/link"
-import { Separator } from "@/components/ui/separator"
+import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react"
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear()
-
-  const footerLinks = {
-    product: [
-      { name: "Features", href: "/features" },
-      { name: "Pricing", href: "/pricing" },
-      { name: "FAQ", href: "/faq" },
-    ],
-    company: [
-      { name: "About", href: "/about" },
-      { name: "Blog", href: "/blog" },
-      { name: "Careers", href: "/careers" },
-    ],
-    support: [
-      { name: "Help Center", href: "/help" },
-      { name: "Contact", href: "/contact" },
-      { name: "Status", href: "/status" },
-    ],
-    legal: [
-      { name: "Privacy", href: "/privacy" },
-      { name: "Terms", href: "/terms" },
-      { name: "Cookies", href: "/cookies" },
-    ],
-  }
-
   return (
-    <footer className="bg-white border-t">
-      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+    <footer className="bg-blue-900 text-white py-12">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="grid md:grid-cols-4 gap-8">
+          {/* Company Info */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">Product</h3>
-            <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
+            <h3 className="text-xl font-bold mb-4">Tutorium</h3>
+            <p className="text-blue-200 mb-4">
+              Connecting Nigerian engineering students with certified lecturers for quality education and mentorship.
+            </p>
+            <div className="flex space-x-4">
+              <Link href="#" className="text-blue-200 hover:text-white transition-colors">
+                <Facebook className="h-5 w-5" />
+              </Link>
+              <Link href="#" className="text-blue-200 hover:text-white transition-colors">
+                <Twitter className="h-5 w-5" />
+              </Link>
+              <Link href="#" className="text-blue-200 hover:text-white transition-colors">
+                <Instagram className="h-5 w-5" />
+              </Link>
+              <Link href="#" className="text-blue-200 hover:text-white transition-colors">
+                <Linkedin className="h-5 w-5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/about" className="text-blue-200 hover:text-white transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/questions" className="text-blue-200 hover:text-white transition-colors">
+                  Questions
+                </Link>
+              </li>
+              <li>
+                <Link href="/lessons" className="text-blue-200 hover:text-white transition-colors">
+                  Video Lessons
+                </Link>
+              </li>
+              <li>
+                <Link href="/study-groups" className="text-blue-200 hover:text-white transition-colors">
+                  Study Groups
+                </Link>
+              </li>
             </ul>
           </div>
 
+          {/* For Students */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">Company</h3>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
+            <h4 className="text-lg font-semibold mb-4">For Students</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/ask" className="text-blue-200 hover:text-white transition-colors">
+                  Ask a Question
+                </Link>
+              </li>
+              <li>
+                <Link href="/student/lecturers" className="text-blue-200 hover:text-white transition-colors">
+                  Find Lecturers
+                </Link>
+              </li>
+              <li>
+                <Link href="/achievements" className="text-blue-200 hover:text-white transition-colors">
+                  Achievements
+                </Link>
+              </li>
+              <li>
+                <Link href="/profile" className="text-blue-200 hover:text-white transition-colors">
+                  Profile
+                </Link>
+              </li>
             </ul>
           </div>
 
+          {/* Contact Info */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">Support</h3>
-            <ul className="space-y-3">
-              {footerLinks.support.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">Legal</h3>
-            <ul className="space-y-3">
-              {footerLinks.legal.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Mail className="h-4 w-4 text-blue-200" />
+                <span className="text-blue-200">support@tutorium.ng</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Phone className="h-4 w-4 text-blue-200" />
+                <span className="text-blue-200">+234 800 123 4567</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-4 w-4 text-blue-200" />
+                <span className="text-blue-200">Lagos, Nigeria</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <Separator className="my-8" />
-
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="flex items-center space-x-2 mb-4 md:mb-0">
-            <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">T</span>
-            </div>
-            <span className="text-xl font-bold text-blue-700">Tutorium</span>
+        {/* Bottom Bar */}
+        <div className="border-t border-blue-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-blue-200 text-sm">© {new Date().getFullYear()} Tutorium. All rights reserved.</p>
+          <div className="flex space-x-6 mt-4 md:mt-0">
+            <Link href="/privacy" className="text-blue-200 hover:text-white text-sm transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="text-blue-200 hover:text-white text-sm transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/help" className="text-blue-200 hover:text-white text-sm transition-colors">
+              Help Center
+            </Link>
           </div>
-
-          <div className="text-sm text-gray-500">&copy; {currentYear} Tutorium. All rights reserved.</div>
         </div>
       </div>
     </footer>

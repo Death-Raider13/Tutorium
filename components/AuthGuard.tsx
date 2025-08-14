@@ -1,149 +1,142 @@
 "use client"
 
-import type React from "react"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { auth } from "@/lib/firebase"
-import { onAuthStateChanged } from "firebase/auth"
 import { useAuth } from "@/hooks/useAuth"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Mail } from "lucide-react"
+import { Shield, AlertTriangle, Mail, Clock } from 'lucide-react'
+import Link from "next/link"
 
 interface AuthGuardProps {
   children: React.ReactNode
+  requireAuth?: boolean
+  allowedRoles?: string[]
   requireEmailVerification?: boolean
-  allowedRoles?: Array<"student" | "lecturer" | "admin" | "pending">
-  fallbackPath?: string
 }
 
-export default function AuthGuard({
-  children,
-  requireEmailVerification = true,
-  allowedRoles,
-  fallbackPath = "/login",
+export default function AuthGuard({ 
+  children, 
+  requireAuth = true, 
+  allowedRoles = [], 
+  requireEmailVerification = false 
 }: AuthGuardProps) {
-  const { user, loading, error, isAuthenticated, isEmailVerified,setLoading } = useAuth(), useState(true)
+  const { user, loading, isAdmin, isLecturer, isStudent, isPending } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push(fallbackPath)
-    }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.push("/login")
-      } else if (!user.emailVerified) {
-        router.push("/verify-email?message=verify-email")
-      } else {
-        setLoading(false)
-      }
-  }, [loading, isAuthenticated, router, fallbackPath])
+    if (loading) return
 
-  // Loading state
+    // If authentication is required but user is not logged in
+    if (requireAuth && !user) {
+      router.push("/login")
+      return
+    }
+
+    // If specific roles are required
+    if (allowedRoles.length > 0 && user) {
+      const userRole = user.role || "pending"
+      if (!allowedRoles.includes(userRole)) {
+        router.push("/dashboard")
+        return
+      }
+    }
+
+    // If email verification is required
+    if (requireEmailVerification && user && !user.emailVerified) {
+      router.push("/verify-email")
+      return
+    }
+  }, [user, loading, requireAuth, allowedRoles, requireEmailVerification, router])
+
+  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md space-y-4">
-          <Skeleton className="h-8 w-3/4 mx-auto" />
-          <Skeleton className="h-4 w-1/2 mx-auto" />
-          <div className="space-y-2">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-20 w-full" />
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If authentication is required but user is not logged in
+  if (requireAuth && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full text-center">
+          <Shield className="mx-auto h-12 w-12 text-red-600 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">You need to be logged in to access this page.</p>
+          <Button asChild>
+            <Link href="/login">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // If specific roles are required and user doesn't have permission
+  if (allowedRoles.length > 0 && user) {
+    const userRole = user.role || "pending"
+    if (!allowedRoles.includes(userRole)) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full text-center">
+            <AlertTriangle className="mx-auto h-12 w-12 text-orange-600 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You don't have permission to access this page. Required role: {allowedRoles.join(" or ")}.
+              Your current role: {userRole}.
+            </p>
+            <Button asChild variant="outline">
+              <Link href="/dashboard">Go to Dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      )
+    }
+  }
+
+  // If email verification is required but user hasn't verified
+  if (requireEmailVerification && user && !user.emailVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full text-center">
+          <Mail className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Email Verification Required</h2>
+          <p className="text-gray-600 mb-6">
+            Please verify your email address to access this page.
+          </p>
+          <Button asChild>
+            <Link href="/verify-email">Verify Email</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Show pending approval message for pending users
+  if (user && isPending && !allowedRoles.includes("pending")) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
+          <Alert className="max-w-2xl mx-auto">
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              Your account is pending approval. You'll receive an email once an administrator reviews your request.
+              In the meantime, you can browse available content with limited access.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-8">
+            {children}
           </div>
         </div>
       </div>
     )
   }
 
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full bg-transparent"
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  // Not authenticated
-  if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Redirecting to login...</p>
-          <Skeleton className="h-8 w-32 mx-auto" />
-        </div>
-      </div>
-    )
-  }
-
-  // Email verification required
-  if (requireEmailVerification && !isEmailVerified) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Alert className="max-w-md">
-          <Mail className="h-4 w-4" />
-          <AlertDescription>
-            Please verify your email address to continue. Check your inbox for a verification link.
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full bg-transparent"
-              onClick={() => router.push("/verify-email")}
-            >
-              Resend Verification Email
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  // Role-based access control
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access this page.
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full bg-transparent"
-              onClick={() => router.push("/dashboard")}
-            >
-              Go to Dashboard
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-  return () => unsubscribe()
-  }, [router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 rounded-full border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
+  // If all checks pass, render the protected content
   return <>{children}</>
 }
