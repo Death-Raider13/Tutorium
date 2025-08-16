@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Separator } from "@/components/ui/separator"
-import { GraduationCap } from "lucide-react"
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -90,7 +89,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center space-x-2 mb-4 md:mb-0">
             <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-              <GraduationCap className="h-5 w-5 text-white" />
+              <span className="text-white font-bold text-sm">T</span>
             </div>
             <span className="text-xl font-bold text-blue-700">Tutorium</span>
           </div>
