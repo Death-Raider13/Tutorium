@@ -1,11 +1,14 @@
 "use client"
 
 import { useAuth } from "@/hooks/useAuth"
+import { useRouter } from "next/navigation"
 import AuthGuard from "@/components/AuthGuard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { ROLE_REDIRECTS } from "@/lib/constants"
 
 import {
   BookOpen,
@@ -32,6 +35,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { user, loading, isLecturer, isStudent, isPending, isAdmin } = useAuth()
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
     totalQuestions: 0,
     answeredQuestions: 0,
@@ -41,9 +45,14 @@ export default function Dashboard() {
   const [loadingStats, setLoadingStats] = useState(true)
 
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!user) return
+    if (loading) return
 
+    if (!user) {
+      router.push("/login")
+      return
+    }
+
+    const fetchStats = async () => {
       try {
         // Fetch user's questions
         const questionsQuery = query(
@@ -60,31 +69,47 @@ export default function Dashboard() {
         // Fetch lessons (for lecturers)
         let lessonsCount = 0
         if (isLecturer) {
-          const lessonsQuery = query(collection(db, "lessons"), where("uploadedBy", "==", user.email))
-          const lessonsSnap = await getDocs(lessonsQuery)
-          lessonsCount = lessonsSnap.size
+          try {
+            const lessonsQuery = query(collection(db, "lessons"), where("uploadedBy", "==", user.email))
+            const lessonsSnap = await getDocs(lessonsQuery)
+            lessonsCount = lessonsSnap.size
+          } catch (error) {
+            console.log("Lessons collection not found, using default value")
+            lessonsCount = 0
+          }
         }
 
         setStats({
-          totalQuestions: questions.length,
-          answeredQuestions: answeredCount,
-          totalLessons: lessonsCount,
-          recentActivity: questions.slice(0, 3),
+          totalQuestions: questions.length || 0,
+          answeredQuestions: answeredCount || 0,
+          totalLessons: lessonsCount || 0,
+          recentActivity: questions.slice(0, 3) || [],
         })
       } catch (error) {
         console.error("Error fetching dashboard stats:", error)
+        // Set default values on error
+        setStats({
+          totalQuestions: 0,
+          answeredQuestions: 0,
+          totalLessons: 0,
+          recentActivity: [],
+        })
       } finally {
         setLoadingStats(false)
       }
     }
 
     fetchStats()
-  }, [user, isLecturer])
+
+    // Redirect to role-specific dashboard
+    const redirectPath = ROLE_REDIRECTS[user.role as keyof typeof ROLE_REDIRECTS]
+    router.push(redirectPath)
+  }, [user, loading, router])
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Redirecting to your dashboard..." />
       </div>
     )
   }
@@ -102,6 +127,13 @@ export default function Dashboard() {
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  // Safe calculation for response rate
+  const calculateResponseRate = () => {
+    if (!stats.totalQuestions || stats.totalQuestions === 0) return 0
+    const rate = (stats.answeredQuestions / stats.totalQuestions) * 100
+    return isNaN(rate) ? 0 : Math.round(rate)
   }
 
   const quickActions = [
@@ -161,7 +193,7 @@ export default function Dashboard() {
                 <p className="text-gray-600 mt-1">Here's what's happening with your account today.</p>
               </div>
               <Badge className={getRoleColor(user?.role || "pending")}>
-                {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+                {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Pending"}
               </Badge>
             </div>
           </div>
@@ -184,8 +216,8 @@ export default function Dashboard() {
                 <HelpCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loadingStats ? "..." : stats.totalQuestions}</div>
-                <p className="text-xs text-muted-foreground">{stats.answeredQuestions} answered</p>
+                <div className="text-2xl font-bold">{loadingStats ? "..." : stats.totalQuestions || 0}</div>
+                <p className="text-xs text-muted-foreground">{stats.answeredQuestions || 0} answered</p>
               </CardContent>
             </Card>
 
@@ -195,14 +227,7 @@ export default function Dashboard() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {loadingStats
-                    ? "..."
-                    : stats.totalQuestions > 0
-                      ? Math.round((stats.answeredQuestions / stats.totalQuestions) * 100)
-                      : 0}
-                  %
-                </div>
+                <div className="text-2xl font-bold">{loadingStats ? "..." : `${calculateResponseRate()}%`}</div>
                 <p className="text-xs text-muted-foreground">Of your questions</p>
               </CardContent>
             </Card>
@@ -214,7 +239,7 @@ export default function Dashboard() {
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{loadingStats ? "..." : stats.totalLessons}</div>
+                  <div className="text-2xl font-bold">{loadingStats ? "..." : stats.totalLessons || 0}</div>
                   <p className="text-xs text-muted-foreground">Total content created</p>
                 </CardContent>
               </Card>
@@ -283,7 +308,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </div>
-                  ) : stats.recentActivity.length > 0 ? (
+                  ) : stats.recentActivity && stats.recentActivity.length > 0 ? (
                     <div className="space-y-4">
                       {stats.recentActivity.map((activity, index) => (
                         <div key={index} className="flex items-start space-x-3">
@@ -295,10 +320,14 @@ export default function Dashboard() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{activity.title}</p>
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {activity.title || "Untitled Question"}
+                            </p>
                             <p className="text-xs text-gray-500">
                               {activity.answered ? "Answered" : "Pending"} •{" "}
-                              {activity.createdAt?.toDate?.()?.toLocaleDateString() || "Recently"}
+                              {activity.createdAt?.toDate
+                                ? activity.createdAt.toDate().toLocaleDateString()
+                                : "Recently"}
                             </p>
                           </div>
                         </div>
